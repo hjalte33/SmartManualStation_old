@@ -1,9 +1,6 @@
-import RPi.GPIO as GPIO
-import signal
-import sys
+from pick_box import PickBox
+from time import sleep
 
 
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(17, GPIO.IN)
-GPIO.setup(18, GPIO.OUT)
+my_box = PickBox(pir_pin = 17, led_pin = 18)
+sleep(10)
