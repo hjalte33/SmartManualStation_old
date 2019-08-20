@@ -164,5 +164,3 @@ if __name__ == '__main__':
     from time import sleep
     instance = PickBox(17,18)
     instance.select()
-    while True:
-        sleep(0.5)
