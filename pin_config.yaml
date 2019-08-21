@@ -1,0 +1,7 @@
+UpperLeft:
+  led_pin : 18
+  pir_pin : 17
+
+UpperRight:
+  led_pin : 19
+  pir_pin : 20
