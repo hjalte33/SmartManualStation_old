@@ -117,8 +117,8 @@ class PirThread(threading.Thread):
        
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, position_id = 0):
-        self.position_id = position_id
+    def __init__(self, pir_pin, led_pin, box_id = 0):
+        self.box_id = box_id
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
 

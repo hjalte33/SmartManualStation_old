@@ -1,6 +1,8 @@
 UpperLeft:
   led_pin : 18
   pir_pin : 17
+  content_id : brick
+  content_count : 100
 
 UpperRight:
   led_pin : 19
