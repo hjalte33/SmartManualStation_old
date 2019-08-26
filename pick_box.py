@@ -70,7 +70,7 @@ class LedThread(threading.Thread):
     def run(self):
         while True:
             self.cal_count()
-            sleep(0.1)
+            time.sleep(0.1)
             if self.count > 0 :
                 if self.led_state:
                     GPIO.output(self.led_pin, GPIO.LOW)
@@ -94,6 +94,7 @@ class LedThread(threading.Thread):
         # clear the runtime command
         self.run_time = 0
 
+# TODO merge this class into the pick box class so it makes use of the async decorator
 class PirThread(threading.Thread):
     def __init__(self,pir_pin,threshold = 0.3):
         '''constructor'''
@@ -108,7 +109,7 @@ class PirThread(threading.Thread):
     def run(self):
         GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=self.pin_callback, bouncetime=self.sleep_time)
         while self.activity_count < self.threshold:
-            sleep(1 - self.activity_count)
+            time.sleep(1 - self.activity_count)
             if self.activity_count > 0 : 
                 self.activity_count -= 0.1 
             
@@ -117,8 +118,11 @@ class PirThread(threading.Thread):
        
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, box_id = 0):
+    def __init__(self, pir_pin, led_pin, box_id = 0, box_name = None, content_id = None, content_count = None):
         self.box_id = box_id
+        self.box_name = box_name
+        self.content_id = content_id
+        self.content_count = content_count
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
 
@@ -127,11 +131,9 @@ class PickBox:
         GPIO.setwarnings(False)
 
         self.led_controler = LedThread(led_pin)
+        self.led_controler.set_state(0)
         self.led_controler.start()
-        self.led_controler.set_state(False)
 
-        self.content_id = ""
-        self.content_count = 0
 
     def set_content(self, content_id, content_count):
         self.content_id = content_id
@@ -143,17 +145,17 @@ class PickBox:
     def get_content(self):
         return (self.content_id, self.content_count)
     
-    #@run_async
-    def select(self,amount=1):
+    @run_async
+    def select(self,amount=1,timeout = 0):
         self.led_controler.on_time = 0.5
         self.led_controler.off_time = 0.5
         self.led_controler.finish_off = False
         self.led_controler.count = 20
-        print('selected box %s, now waiting for pir sensor', self.position_id)
+        print('selected box %s, now waiting for pir sensor' % self.box_id)
         pir_wait = PirThread(self.__pir_pin, 0.2)
         pir_wait.start()
         pir_wait.join()
-        print('pir detcted')
+        print('pir detcted on box id: %s' % self.box_id)
         self.led_controler.set_state(False)
 
     def calibrate(self):
@@ -162,5 +164,6 @@ class PickBox:
 
 if __name__ == '__main__':
     from time import sleep
-    instance = PickBox(17,18)
+    instance = PickBox(20,21)
     instance.select()
+    sleep(15)
