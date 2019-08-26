@@ -1,0 +1,14 @@
+1:
+  box_name : upper_left
+  content_id : yellow_brick
+  content_count : 100
+
+2:
+  box_name : upper_middle
+  content_id : red_brick
+  content_count : 100
+
+3:
+  box_name : upper_right
+  content_id : eye_brick
+  content_count : 100
