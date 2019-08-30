@@ -1,5 +1,6 @@
 
 import RPi.GPIO as GPIO
+from opcua import ua, Server
 
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BCM)
@@ -118,7 +119,8 @@ class PirThread(threading.Thread):
        
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, box_id = 0, box_name = None, content_id = None, content_count = None):
+    def __init__(self, packml_ref, pir_pin, led_pin, box_id = 0, box_name = None, content_id = None, content_count = None):
+        self.packml = packml_ref
         self.box_id = box_id
         self.box_name = box_name
         self.content_id = content_id
@@ -133,6 +135,11 @@ class PickBox:
         self.led_controler = LedThread(led_pin)
         self.led_controler.set_state(0)
         self.led_controler.start()
+
+        opc_name = str(self.box_id) + ' ' + str(box_name)
+        self.packml_obj = self.packml.objects.add_object(self.packml.idx, opc_name)
+        self.a_var = self.packml_obj.add_variable(self.packml.idx, 'selected', False)
+        self.a_var.set_writable()
 
 
     def set_content(self, content_id, content_count):
@@ -152,10 +159,17 @@ class PickBox:
         self.led_controler.finish_off = False
         self.led_controler.count = 20
         print('selected box %s, now waiting for pir sensor' % self.box_id)
+        
+        #update opc-ua
+        self.a_var.set_value(True)
+
         pir_wait = PirThread(self.__pir_pin, 0.2)
         pir_wait.start()
         pir_wait.join()
         print('pir detcted on box id: %s' % self.box_id)
+
+        self.a_var.set_value(False)
+        
         self.led_controler.set_state(False)
 
     def calibrate(self):
@@ -164,6 +178,10 @@ class PickBox:
 
 if __name__ == '__main__':
     from time import sleep
-    instance = PickBox(20,21)
+    from packml import PackML
+    packml = PackML()
+    instance = PickBox(packml,20,21)
+    packml.start_server()
     instance.select()
-    sleep(15)
+    sleep(30)
+    packml.server.stop()
