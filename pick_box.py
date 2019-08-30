@@ -113,6 +113,7 @@ class PirThread(threading.Thread):
             time.sleep(1 - self.activity_count)
             if self.activity_count > 0 : 
                 self.activity_count -= 0.1 
+        GPIO.remove_event_detect(self.pir_pin)
             
     def pin_callback(self,pin):
         self.activity_count += 0.1
