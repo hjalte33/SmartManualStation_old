@@ -168,6 +168,7 @@ class PickBox:
         pir_wait.join()
         print('pir detcted on box id: %s' % self.box_id)
 
+        #update opc-ua
         self.a_var.set_value(False)
         
         self.led_controler.set_state(False)
