@@ -64,12 +64,25 @@ read_config()
 print(boxes)
 packml.start_server()
 
-for key , box in boxes.items():
-    print(box.get_content())
-    box.select()
-    sleep(8)
+# for key , box in boxes.items():
+#     print(box.get_content())
+#     box.select()
+#     sleep(8)
 
-sleep(120)
-packml.server.stop()
+import sys, time
+
+x = 1
+while True:
+    try:
+        selected = input('select 1-3 box')
+        tmp = boxes[int(selected)]
+        tmp.select()
+
+    except KeyboardInterrupt:
+        print ("Bye")
+        packml.server.stop()
+        sys.exit()
+
+
 
 
