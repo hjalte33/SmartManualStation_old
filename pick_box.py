@@ -1,7 +1,7 @@
 
 import RPi.GPIO as GPIO
 from opcua import ua, Server
-from ittertools import cycle
+
 
 
 
@@ -98,27 +98,27 @@ class LedThread(threading.Thread):
         # clear the runtime command
         self.run_time = 0
 
-# TODO merge this class into the pick box class so it makes use of the async decorator
+
 class PirThread(threading.Thread):
-    def __init__(self,pir_pin,threshold = 2):
+    def __init__(self,pir_pin):
         '''constructor'''
         threading.Thread.__init__(self)
         self.daemon = True
         self.pir_pin = pir_pin
-        self.threshold = threshold
-        self.activity_count = 0
-        self.activity = False
-        self.reading = []
-        self.bounce_time = 5000 #ms  takes the sensor about 5 sec to get stable readings. 
-        GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=lambda pin: setattr(self,'activity',pin), bouncetime=self.bounce_time)
-    
+        self.activity = threading.Event()
+        self.bounce_time = 4000 #ms  takes the sensor about 5 sec to get stable readings. 
+
     def run(self): 
-        while true:
-            sleep(1)
-            if self.activity == True:
-                time.sleep(self.bounce_time)
-                #after bounce time be sure to read the sersor again 
-                self.pin_callback(self.pin)
+        GPIO.add_event_detect(self.pir_pin, GPIO.RISING, callback=self.callback)
+        while True:
+            self.activity.wait()
+            time.sleep(self.bounce_time/1000)  
+            if 0 == GPIO.input(self.pir_pin):
+                self.activity.clear()
+            pass
+
+    def callback(self,pin):
+        self.activity.set()    
        
 
 class PickBox:
@@ -140,6 +140,9 @@ class PickBox:
         self.led_controler.set_state(0)
         self.led_controler.start()
 
+        self.pir_controller = PirThread(pir_pin)
+        self.pir_controller.start()
+
         opc_name = str(self.box_id) + ' ' + str(box_name)
         self.packml_obj = self.packml.objects.add_object(self.packml.idx, opc_name)
         self.a_var = self.packml_obj.add_variable(self.packml.idx, 'selected', False)
@@ -156,8 +159,7 @@ class PickBox:
     def get_content(self):
         return (self.content_id, self.content_count)
     
-    @run_async
-    def select(self,amount=1,timeout = 0):
+    def select(self,amount=1,timeout = None):
         
         if self.selected : return False
 
@@ -171,9 +173,8 @@ class PickBox:
         #update opc-ua
         self.a_var.set_value(True)
 
-        pir_wait = PirThread(self.__pir_pin, 0.2)
-        pir_wait.start()
-        pir_wait.join()
+        pir_controller.activity.wait(timeout)
+
         print('pir detcted on box id: %s' % self.box_id)
         
         self.selected = False
@@ -192,8 +193,10 @@ if __name__ == '__main__':
     from time import sleep
     from packml import PackML
     packml = PackML()
-    instance = PickBox(packml,20,21)
+    instance = PickBox(packml,pir_pin = 20,led_pin = 21)
     packml.start_server()
-    instance.select()
-    sleep(30)
+    #instance.select()
+    while True:
+        sleep(0.5)
+        print(instance.pir_controller.activity.is_set())
     packml.server.stop()
