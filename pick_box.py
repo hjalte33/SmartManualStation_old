@@ -1,6 +1,9 @@
 
 import RPi.GPIO as GPIO
 from opcua import ua, Server
+from ittertools import cycle
+
+
 
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BCM)
@@ -97,26 +100,25 @@ class LedThread(threading.Thread):
 
 # TODO merge this class into the pick box class so it makes use of the async decorator
 class PirThread(threading.Thread):
-    def __init__(self,pir_pin,threshold = 0.3):
+    def __init__(self,pir_pin,threshold = 2):
         '''constructor'''
         threading.Thread.__init__(self)
         self.daemon = True
         self.pir_pin = pir_pin
         self.threshold = threshold
-        self.activity_count = 0.0
-        self.sleep_time = 100 #ms
-
-
-    def run(self):
-        GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=self.pin_callback, bouncetime=self.sleep_time)
-        while self.activity_count < self.threshold:
-            time.sleep(1 - self.activity_count)
-            if self.activity_count > 0 : 
-                self.activity_count -= 0.1 
-        GPIO.remove_event_detect(self.pir_pin)
-            
-    def pin_callback(self,pin):
-        self.activity_count += 0.1
+        self.activity_count = 0
+        self.activity = False
+        self.reading = []
+        self.bounce_time = 5000 #ms  takes the sensor about 5 sec to get stable readings. 
+        GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=lambda pin: setattr(self,'activity',pin), bouncetime=self.bounce_time)
+    
+    def run(self): 
+        while true:
+            sleep(1)
+            if self.activity == True:
+                time.sleep(self.bounce_time)
+                #after bounce time be sure to read the sersor again 
+                self.pin_callback(self.pin)
        
 
 class PickBox:
@@ -128,6 +130,7 @@ class PickBox:
         self.content_count = content_count
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
+        self.selected = False
 
         GPIO.setup(self.__pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.__led_pin, GPIO.OUT)
@@ -155,6 +158,10 @@ class PickBox:
     
     @run_async
     def select(self,amount=1,timeout = 0):
+        
+        if self.selected : return False
+
+        self.selected = True
         self.led_controler.on_time = 0.5
         self.led_controler.off_time = 0.5
         self.led_controler.finish_off = False
@@ -168,11 +175,14 @@ class PickBox:
         pir_wait.start()
         pir_wait.join()
         print('pir detcted on box id: %s' % self.box_id)
-
+        
+        self.selected = False
+        
         #update opc-ua
         self.a_var.set_value(False)
         
         self.led_controler.set_state(False)
+        return True
 
     def calibrate(self):
         pass

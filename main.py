@@ -72,17 +72,32 @@ packml.start_server()
 import sys, time
 
 x = 1
-while True:
+# while True:
+#     try:
+#         selected = input('select 1-3 box')
+#         tmp = boxes[int(selected)]
+#         tmp.select()
+
+#     except KeyboardInterrupt:
+#         print ("Bye")
+#         packml.server.stop()
+#         sys.exit()
+
+import random 
+
+next_time = time.time()
+while True: 
+    
     try:
-        selected = input('select 1-3 box')
-        tmp = boxes[int(selected)]
-        tmp.select()
+        if time.time() >= next_time:
+            tmp = boxes[random.randint(1,4)]
+            if tmp.select():
+                next_time = time.time() + random.randint(7,10)
 
     except KeyboardInterrupt:
         print ("Bye")
         packml.server.stop()
         sys.exit()
-
 
 
 

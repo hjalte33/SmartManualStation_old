@@ -1,14 +1,19 @@
 1:
   box_name : upper_left
-  content_id : yellow_brick
+  content_id : 300424
   content_count : 100
 
 2:
-  box_name : upper_middle
-  content_id : red_brick
+  box_name : upper_right
+  content_id : 302121
   content_count : 100
 
 3:
-  box_name : upper_right
-  content_id : eye_brick
+  box_name : lower_left
+  content_id : 300124
+  content_count : 100
+
+4:
+  box_name : lower_right
+  content_id : 300324
   content_count : 100
