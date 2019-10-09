@@ -6,19 +6,26 @@ class PackML:
         # constructor
         self.server = Server('./opcua_cache')
 
-        self.server.set_endpoint('opc.tcp://0.0.0.0:4840/UA/SampleServer')
+        self.server.set_endpoint('opc.tcp://0.0.0.0:4840/UA/PickByLight')
+        self.server.set_server_name("Pick By Light Server")
         
         # setup our own namespace, not really necessary but should as spec
         uri = "http://examples.freeopcua.github.io"
         self.idx = self.server.register_namespace(uri)
 
-        # get Objects node, this is where we should put our nodes
+
+        #set all possible endpoint policies for clienst to connect through
+        self.server.set_security_policy([
+                ua.SecurityPolicyType.NoSecurity,
+                ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
+                ua.SecurityPolicyType.Basic256Sha256_Sign])
+
+        # create new nodes
+        self.command_node = self.server.nodes.base_object_type.add_object(self.idx, 'Command')
+        self.command_node.add_variable(self.idx, 'testing_this_node',1).set_modelling_rule(True)
+        self.command_node.add_property(self.idx, 'a property test','the value')
         self.objects = self.server.get_objects_node()
 
-        # populating our address space
-        self.myobj = self.objects.add_object(self.idx, "MyObject")
-        self.myvar = self.myobj.add_variable(self.idx, "MyVariable", 6.7)
-        self.myvar.set_writable()    # Set MyVariable to be writable by clients
 
     def add_object(self, name):
         return self.objects.add_object(self.idx, name)
@@ -42,7 +49,7 @@ if __name__ == "__main__":
             time.sleep(1)
             print('counting... %s' %count)
             count += 0.1
-            my_opc.myvar.set_value(count)
+            my_opc.status_obj.set_value(count)
     finally:
         #close connection, remove subcsriptions, etc
         my_opc.server.stop()
