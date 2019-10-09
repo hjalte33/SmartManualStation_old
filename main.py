@@ -2,7 +2,7 @@ from pick_box import PickBox
 from time import sleep
 import yaml
 import warnings
-from packml import PackML
+import packml
 
 
 

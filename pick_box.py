@@ -4,8 +4,7 @@ from opcua import ua, Server
 import threading
 import time
 from datetime import datetime, timedelta
-
-
+import packml
 
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BCM)
@@ -221,17 +220,19 @@ class PickBox:
         pass
 
 class PickByLight:
-    def __init__(self,boxes, name_thingworx):
+    def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
-        self.name_thingworx
-        
+        self.thingworx_name = thingworx_name
+        self.packml_instance = PackML()
 
         #create an OPC name
-        opc_name = str(self.box_id) + ' ' + str(box_name)
+        opc_name = self.thingworx_name
+       
         # create an obejct in the pacml using our unique name
-        self.packml_obj = self.packml.objects.add_object(self.packml.idx, opc_name)
+        self.packml_obj = self.packml_instance.add_object(opc_name)
+
         # create a variable inside the newly created object.
-        self.a_var = self.packml_obj.add_variable(self.packml.idx, 'selected', False)
+        self.a_var = self.packml_obj.add_variable(self.packml_instance.idx, 'selected', False)
 
         #create a method on opcua
         select_method = self.packml_obj.add_method(self.packml.idx,'select', self.select, [ua.VariantType.Int64], [ua.VariantType.Boolean])
