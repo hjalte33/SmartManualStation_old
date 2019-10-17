@@ -1,7 +1,6 @@
-from opcua import ua, Server
+from opcua import ua, Server, uamethod
 from opcua.common.type_dictionary_buider import DataTypeDictionaryBuilder, get_ua_class
 import time
-
 
 class PackMLServer:
 
@@ -26,12 +25,15 @@ class PackMLServer:
 
         # get Objects node, this is where we should put our custom stuff
         objects = self.server.get_objects_node()
+        # add a PackMLObjecs folder
+        self.pml_folder = objects.add_folder(self.idx, "PackMLObjects")
 
+        # Get the base type object
         types = self.server.get_node(ua.ObjectIds.BaseObjectType)
-
+        # Create a new type for PackMLObjects
         self.PackMLBaseObjectType = types.add_object_type(self.idx, "PackMLBaseObjectType")
-        self.Admin = objects.add_object(self.idx, "Admin", self.PackMLBaseObjectType.nodeid)
-        self.Status = objects.add_object(self.idx, "Status", self.PackMLBaseObjectType.nodeid)
+        self.Admin = self.pml_folder.add_object(self.idx, "Admin", self.PackMLBaseObjectType.nodeid)
+        self.Status = self.pml_folder.add_object(self.idx, "Status", self.PackMLBaseObjectType.nodeid)
 
     def __enter__(self):
         return self
@@ -53,14 +55,18 @@ class PackMLServer:
     def create_object(self, name):
         return self.server.nodes.base_object_type.add_object(self.idx, name)
 
+    
+
+    def get_pml_folder(self):
+        return self.server.get_node("PackMLObjects")
 
 
 # This set up the server defined just above. 
-with PackMLServer() as ua_server:
+with PackMLServer() as pml_server:
     
     # add one basic structure. This should probaly be moved the the packml server class. 
     basic_struct_name = 'basic_parameter'
-    basic_struct = ua_server.create_structure(basic_struct_name)
+    basic_struct = pml_server.create_structure(basic_struct_name)
     basic_struct.add_field('ID', ua.VariantType.Int32)
     basic_struct.add_field('Name', ua.VariantType.String)
     basic_struct.add_field('Unit', ua.VariantType.String)
@@ -68,18 +74,18 @@ with PackMLServer() as ua_server:
 
     # this operation will write the OPC dict string to our new data type dictionary
     # namely the 'MyDictionary'
-    ua_server.complete_creation()
+    pml_server.complete_creation()
     
     # create new nodes
-    # status_node = ua_server.server.nodes.base_object_type.add_object(idx, 'Status').set_modelling_rule(True)
-    # admin_node = ua_server.server.nodes.base_object_type.add_object(idx, 'Admin').set_modelling_rule(True)
+    # status_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Status').set_modelling_rule(True)
+    # admin_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Admin').set_modelling_rule(True)
 
     
     # get the working classes
-    ua_server.server.load_type_definitions()
+    pml_server.server.load_type_definitions()
 
     # Create one test structure
-    basic_var = ua_server.server.nodes.objects.add_variable(ua.NodeId(namespaceidx=ua_server.idx), 'BasicStruct',
+    basic_var = pml_server.server.nodes.objects.add_variable(ua.NodeId(namespaceidx=pml_server.idx), 'BasicStruct',
                                                             ua.Variant(None, ua.VariantType.Null),
                                                             datatype=basic_struct.data_type)
 
@@ -93,7 +99,7 @@ with PackMLServer() as ua_server:
 
   
 
-    ua_server.start_server()
+    pml_server.start_server()
 
 
 # class that defines a PackML parameter

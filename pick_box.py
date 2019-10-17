@@ -1,6 +1,6 @@
 
 import RPi.GPIO as GPIO
-from opcua import ua, Server
+from opcua import ua, Server, uamethod
 import threading
 import time
 from datetime import datetime, timedelta
@@ -123,14 +123,15 @@ class PirThread(threading.Thread):
 
     def callback(self,pin):
         self.activity.set()    
-       
+
+class BoxData:
+    def __init__(self, **kvargs):
+        pass
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, box_id = None, box_name = None, content_id = None, content_count = None):
+    def __init__(self, pir_pin, led_pin, box_id, box_data = BoxData()):
         self.box_id = box_id
-        self.box_name = box_name
-        self.content_id = content_id
-        self.content_count = content_count
+        self.box_data = box_data
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
         self.selected = False
@@ -180,6 +181,7 @@ class PickBox:
             # busy waiting for pir sensor (usually only short time so it doesn't matter it's busy waiting.)
             while not self.pir_controller.is_ready:
                 if datetime.now() >= _timeout:
+                    # If main timeout while we wait for pir return false 
                     return False
                 time.sleep(0.1)
 
@@ -194,9 +196,6 @@ class PickBox:
         self.led_controler.finish_off = False
         self.led_controler.count = 20
         print('selected box %s, now waiting for pir sensor' % self.box_id)
-        
-        #update opc-ua
-        self.a_var.set_value(True)
 
         signal = self.pir_controller.activity.wait(timeout)
         if signal:
@@ -204,11 +203,9 @@ class PickBox:
         else:
             print('timeout: pir sensor on box id: %s' %self.box_id)
             pass 
+        
         # set internal flag
         self.selected = False
-        
-        # update opc-ua
-        self.a_var.set_value(False)
         
         # turn off LED
         self.led_controler.set_state(False)
@@ -217,19 +214,24 @@ class PickBox:
         return signal
 
     def calibrate(self):
+        '''
+            not implemented. ToDo
+        '''
         pass
 
 class PickByLight:
     def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
         self.thingworx_name = thingworx_name
-        self.packml_instance = PackML()
+        
+        #get packml folder 
+        self.pml_folder = packml.pml_server.get_pml_folder()
 
-        #create an OPC name
+        #create an OPC name 
         opc_name = self.thingworx_name
        
-        # create an obejct in the pacml using our unique name
-        self.packml_obj = self.packml_instance.add_object(opc_name)
+        # create an obejct in the pacml module using our unique name
+        self.packml_obj = packml.pml_folder.packml_instance.add_object(opc_name)
 
         # create a variable inside the newly created object.
         self.a_var = self.packml_obj.add_variable(self.packml_instance.idx, 'selected', False)
@@ -251,9 +253,11 @@ class PickByLight:
 
     def selet_box_by_name(self, name):
         pass
-
-    def select_box_by_id(self, id):
+    
+    @uamethod
+    def select_box_by_id(self, parrent, id):
         pass
+
 
 
 

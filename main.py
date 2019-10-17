@@ -1,4 +1,4 @@
-from pick_box import PickBox
+from pick_box import PickBox, BoxData
 from time import sleep
 import yaml
 import warnings
@@ -45,29 +45,33 @@ def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
         for box_id, args in box_config.items():
             # Try to fetch the pins
             try:
+                print('Loading pir and led pins for box id %s ......' %box_id)
                 pir_pin = pin_config[box_id]['pir_pin']
                 led_pin = pin_config[box_id]['led_pin']
             except KeyError:
-                warnings.warn('pin config for box id %s was not loaded. Are you sure the pin config is formatted correctly?' %box_id)
+                warnings.warn('"pin config" for box id %s was not found. Are you sure the pin config is formatted correctly?' %box_id)
                 
                 # Go back to top and read next box config
                 continue
 
+            # Create placeholder for box data
+            box_data = BoxData()
+
             # Chechk for box name and content config
             if 'box_name' in args:
-                box_name = args['box_name']
-            else: box_name = None
+                print('name : ', args['box_name'])
+                box_data.box_name = args['box_name']
 
             if 'content_count' in args:
-                content_count = args['content_count']
-            else: content_count = None
+                print('content count : ', args['content_count'])
+                box_data.content_count = args['content_count']
 
             if 'content_id' in args:
-                content_id = args['content_id']
-            else: content_id = None
+                print('content id : ', args['content_id'])
+                box_data.content_id = args['content_id']
 
             # Finally create the instance of the pick by light box
-            new_box = PickBox(pir_pin,led_pin, box_id, box_name, content_id, content_count)
+            new_box = PickBox(pir_pin,led_pin, box_id, box_data)
 
             # Push the newly created box the the list of boxes. 
             boxes_to_return[box_id] = new_box        
