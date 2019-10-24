@@ -73,13 +73,12 @@ def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
 
 
 if __name__ == "__main__":
-    
+
 
     boxes = read_config()
-    print(boxes)
 
     pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
-
+    packml.server.start()
 
     
 

@@ -106,7 +106,6 @@ class PirThread(threading.Thread):
         self.daemon = True
         self.pir_pin = pir_pin
         self._activity = threading.Event()
-        self.activity = False
         self.bounce_time = 4000 #ms  takes the sensor about 5 sec to get stable readings. 
 
     @property
@@ -227,20 +226,21 @@ class PickByLight:
         self.thingworx_name = thingworx_name
         
         #get packml folder 
-        self.pml_folder = packml.pml_server.get_pml_folder()
+        self.pml_folder = packml.pml_folder
 
         #create an OPC name 
         opc_name = self.thingworx_name
-       
+
         # create an obejct in the pacml module using our unique name
-        self.packml_obj = packml.pml_folder.packml_instance.add_object(opc_name)
+        self.packml_obj = packml.pml_folder.add_object(packml.idx, opc_name)
 
         # create a variable inside the newly created object.
-        self.a_var = self.packml_obj.add_variable(self.packml_instance.idx, 'selected', False)
-
+        self.a_var = self.packml_obj.add_variable(packml.idx, 'selected', False)
+        
         #create a method on opcua
-        select_method = self.packml_obj.add_method(packml.pml_server.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
-    
+        select_method = self.packml_obj.add_method(packml.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+ 
+
     def get_box_by_name(self, name):
         pass
     
@@ -256,9 +256,13 @@ class PickByLight:
     def selet_box_by_name(self, name):
         pass
 
-    def select_box_by_id(self, id):
-        print('yaay selected a box')
-        pass
+    def select_box_by_id(self, parent, id):
+        try:
+            self.boxes[id.Value].select()
+        except KeyError:
+            print('404 box not found')           
+            
+        
 
 
 
