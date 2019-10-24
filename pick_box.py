@@ -220,6 +220,7 @@ class PickBox:
         '''
         pass
 
+
 class PickByLight:
     def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
@@ -236,11 +237,10 @@ class PickByLight:
 
         # create a variable inside the newly created object.
         self.a_var = self.packml_obj.add_variable(packml.idx, 'selected', False)
-        
+
         #create a method on opcua
         select_method = self.packml_obj.add_method(packml.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
  
-
     def get_box_by_name(self, name):
         pass
     
@@ -270,11 +270,4 @@ class PickByLight:
 
 
 if __name__ == '__main__':
-    from time import sleep
-    from packml import PackML
-    packml = PackML()
-    instance = PickBox(packml,pir_pin = 20,led_pin = 21)
-    packml.start_server()
-    instance.select(timeout=10)
-    sleep (30)
-    packml.server.stop()
+    pass
