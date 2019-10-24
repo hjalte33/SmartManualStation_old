@@ -1,9 +1,8 @@
-from pick_box import PickBox, BoxData
+from pick_box import PickBox, PickByLight
 from time import sleep
 import yaml
 import warnings
 import packml
-
 
 
 def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
@@ -54,24 +53,11 @@ def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
                 # Go back to top and read next box config
                 continue
 
-            # Create placeholder for box data
-            box_data = BoxData()
-
-            # Chechk for box name and content config
-            if 'box_name' in args:
-                print('name : ', args['box_name'])
-                box_data.box_name = args['box_name']
-
-            if 'content_count' in args:
-                print('content count : ', args['content_count'])
-                box_data.content_count = args['content_count']
-
-            if 'content_id' in args:
-                print('content id : ', args['content_id'])
-                box_data.content_id = args['content_id']
+            # Print the configs to terminal for easy debugging
+            print(args)
 
             # Finally create the instance of the pick by light box
-            new_box = PickBox(pir_pin,led_pin, box_id, box_data)
+            new_box = PickBox(pir_pin,led_pin, box_id, args)
 
             # Push the newly created box the the list of boxes. 
             boxes_to_return[box_id] = new_box        
@@ -89,11 +75,13 @@ def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
 if __name__ == "__main__":
     
 
-    #packml = PackML()
-
     boxes = read_config()
     print(boxes)
 
-    #packml.start_server()
+    pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
+
+
+    
+
 
 

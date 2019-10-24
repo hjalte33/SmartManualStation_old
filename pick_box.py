@@ -7,13 +7,13 @@ from datetime import datetime, timedelta
 import packml
 
 if not GPIO.getmode():
-    GPIO.setmode(GPIO.BCM)
-elif GPIO.getmode() == GPIO.BCM:
-    raise Warning('GPIO.mode was already set to BCM somewhree else.')
+    GPIO.setmode(GPIO.BOARD)
 elif GPIO.getmode() == GPIO.BOARD:
-    raise Exception('GPIO.mode is set to BOARD mode. This library needs BCM mode. didn\'t try to change it ')
+    raise Warning('GPIO.mode was already set to BOARD somewhree else.')
+elif GPIO.getmode() == GPIO.BOARD:
+    raise Exception('GPIO.mode is set to BCM mode. This library needs BORD mode. I didn\'t try to change it ')
 else:
-    raise Exception('GPIO.mode is set to some unknown mode. This library needs BCM mode. didn\'t try to change it ')
+    raise Exception('GPIO.mode is set to some unknown mode. This library needs BORD mode. I didn\'t try to change it ')
 
 
 
@@ -105,33 +105,36 @@ class PirThread(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
         self.pir_pin = pir_pin
-        self.activity = threading.Event()
+        self._activity = threading.Event()
+        self.activity = False
         self.bounce_time = 4000 #ms  takes the sensor about 5 sec to get stable readings. 
 
     @property
+    def activity(self):
+        return self._activity.is_set()
+
+    @property
     def is_ready(self):    
-        return not self.activity.is_set()
+        return not self._activity.is_set()
 
     def run(self): 
         GPIO.add_event_detect(self.pir_pin, GPIO.RISING, callback=self.callback)
         while True:
-            self.activity.wait()
+            self._activity.wait()
             time.sleep(self.bounce_time/1000)  
             if 0 == GPIO.input(self.pir_pin):
-                self.activity.clear()
+                self._activity.clear()
             pass
 
     def callback(self,pin):
-        self.activity.set()    
+        self._activity.set()    
 
-class BoxData:
-    def __init__(self, **kvargs):
-        pass
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, box_id, box_data = BoxData()):
+    def __init__(self, pir_pin, led_pin, box_id, box_data:dict):
         self.box_id = box_id
         self.box_data = box_data
+        self.box_data['id'] = self.box_id # double the info into the box data as well.
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
         self.selected = False
@@ -151,17 +154,16 @@ class PickBox:
         self.pir_controller.start()
 
     def set_content(self, content_id, content_count):
-        self.content_id = content_id
-        self.content_count = content_count
+        self.box_data['content_id'] = content_id
+        self.box_data['content_count'] = content_count
     
     def set_content_count(self, content_count):
-        self.content_count = content_count
+        self.box_data['content_count'] = content_count
 
     def get_content(self):
-        return (self.content_id, self.content_count)
+        return (self.box_data['content_id'], self.box_data['content_count'])
     
-    @run_async
-    def select(self,amount=1,timeout = None):
+    def select(self,timeout = None):
         if type(timeout) == ua.Variant:
             timeout = timeout.Value
 
@@ -197,7 +199,7 @@ class PickBox:
         self.led_controler.count = 20
         print('selected box %s, now waiting for pir sensor' % self.box_id)
 
-        signal = self.pir_controller.activity.wait(timeout)
+        signal = self.pir_controller._activity.wait(timeout)
         if signal:
             print('pir detcted on box id: %s' % self.box_id)
         else:
@@ -237,7 +239,7 @@ class PickByLight:
         self.a_var = self.packml_obj.add_variable(self.packml_instance.idx, 'selected', False)
 
         #create a method on opcua
-        select_method = self.packml_obj.add_method(self.packml.idx,'select', self.select, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+        select_method = self.packml_obj.add_method(packml.pml_server.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
     
     def get_box_by_name(self, name):
         pass
@@ -253,9 +255,9 @@ class PickByLight:
 
     def selet_box_by_name(self, name):
         pass
-    
-    @uamethod
-    def select_box_by_id(self, parrent, id):
+
+    def select_box_by_id(self, id):
+        print('yaay selected a box')
         pass
 
 

@@ -35,13 +35,6 @@ class PackMLServer:
         self.Admin = self.pml_folder.add_object(self.idx, "Admin", self.PackMLBaseObjectType.nodeid)
         self.Status = self.pml_folder.add_object(self.idx, "Status", self.PackMLBaseObjectType.nodeid)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-    #quit()
-
     def start_server(self):
         self.server.start()
 
@@ -55,84 +48,59 @@ class PackMLServer:
     def create_object(self, name):
         return self.server.nodes.base_object_type.add_object(self.idx, name)
 
-    
+    def create_method(self, name, func, inputs, outputs):
+        pass
 
     def get_pml_folder(self):
         return self.server.get_node("PackMLObjects")
 
 
-# This set up the server defined just above. 
-with PackMLServer() as pml_server:
-    
-    # add one basic structure. This should probaly be moved the the packml server class. 
-    basic_struct_name = 'basic_parameter'
-    basic_struct = pml_server.create_structure(basic_struct_name)
-    basic_struct.add_field('ID', ua.VariantType.Int32)
-    basic_struct.add_field('Name', ua.VariantType.String)
-    basic_struct.add_field('Unit', ua.VariantType.String)
-    basic_struct.add_field('Value', ua.VariantType.Int32)
 
-    # this operation will write the OPC dict string to our new data type dictionary
-    # namely the 'MyDictionary'
-    pml_server.complete_creation()
-    
-    # create new nodes
-    # status_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Status').set_modelling_rule(True)
-    # admin_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Admin').set_modelling_rule(True)
+pml_server = PackMLServer()
 
-    
-    # get the working classes
-    pml_server.server.load_type_definitions()
+# add one basic structure. This should probaly be moved the the packml server class. 
+basic_struct_name = 'basic_parameter'
+basic_struct = pml_server.create_structure(basic_struct_name)
+basic_struct.add_field('ID', ua.VariantType.Int32)
+basic_struct.add_field('Name', ua.VariantType.String)
+basic_struct.add_field('Unit', ua.VariantType.String)
+basic_struct.add_field('Value', ua.VariantType.Int32)
 
-    # Create one test structure
-    basic_var = pml_server.server.nodes.objects.add_variable(ua.NodeId(namespaceidx=pml_server.idx), 'BasicStruct',
-                                                            ua.Variant(None, ua.VariantType.Null),
-                                                            datatype=basic_struct.data_type)
+# this operation will write the OPC dict string to our new data type dictionary
+# namely the 'MyDictionary'
+pml_server.complete_creation()
 
-    basic_var.set_writable()
-    basic_msg = get_ua_class(basic_struct_name)()
-    basic_msg.ID = 3
-    basic_msg.Gender = True
-    basic_msg.Comments = 'Test string'
-    basic_var.set_value(basic_msg)
+# create new nodes
+# status_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Status').set_modelling_rule(True)
+# admin_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Admin').set_modelling_rule(True)
 
 
-  
+# get the working classes
+pml_server.server.load_type_definitions()
 
-    pml_server.start_server()
+# Create one test structure
+basic_var = pml_server.server.nodes.objects.add_variable(ua.NodeId(namespaceidx=pml_server.idx), 'BasicStruct',
+                                                        ua.Variant(None, ua.VariantType.Null),
+                                                        datatype=basic_struct.data_type)
 
-
-# class that defines a PackML parameter
-# class Param:
-#     def __init__(self,id,name,unit,value = None):
-#         self.id = id
-#         self.name = name
-#         self.unit = unit
-#         self.value = value
-
-
-        
+basic_var.set_writable()
+basic_msg = get_ua_class(basic_struct_name)()
+basic_msg.ID = 3
+basic_msg.Gender = True
+basic_msg.Comments = 'Test string'
+basic_var.set_value(basic_msg)
 
 
 
 
+pml_server.start_server()
 
-
-# picked_boxes = Param(1234,"test","list",[5,6,7])
-# status_node.add_variable(idx, 'picked_boxes', picked_boxes).set_modelling_rule(True)
-
-# command_node.add_property(idx, 'a property test','the value')
-# objects = server.get_objects_node()
-
-
-
-# server.start()        
- 
 
     
 try:
+    pml_server.start_server()
     while True:
         time.sleep(1)
 finally:
     # close connection, remove subcsriptions, etc
-    server.stop()
+    pml_server.server.stop()
