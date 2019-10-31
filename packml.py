@@ -1,5 +1,6 @@
 from opcua import ua, Server, uamethod
 from opcua.common.type_dictionary_buider import DataTypeDictionaryBuilder, get_ua_class
+from opcua.common.callback import CallbackType
 import time
 
 
@@ -32,24 +33,6 @@ types = server.get_node(ua.ObjectIds.BaseObjectType)
 PackMLBaseObjectType = types.add_object_type(idx, "PackMLBaseObjectType")
 Admin = pml_folder.add_object(idx, "Admin", PackMLBaseObjectType.nodeid)
 Status = pml_folder.add_object(idx, "Status", PackMLBaseObjectType.nodeid)
-
-
-
-# def create_structure(self, name):
-#     # save the created data type
-#     return dict_builder.create_data_type(name)
-
-# def complete_creation(self):
-#     dict_builder.set_dict_byte_string()
-
-# def create_object(self, name):
-#     return server.nodes.base_object_type.add_object(idx, name)
-
-# def create_method(self, name, func, inputs, outputs):
-#     pass
-
-# def get_pml_folder(self):
-#     return server.get_node("PackMLObjects")
 
 
 

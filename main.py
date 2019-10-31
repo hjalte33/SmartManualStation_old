@@ -80,7 +80,7 @@ if __name__ == "__main__":
     pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
     packml.server.start()
 
-    
+    #pbl.postServerStart()
 
 
 

@@ -1,10 +1,10 @@
-
 import RPi.GPIO as GPIO
-from opcua import ua, Server, uamethod
+from opcua import ua, uamethod
 import threading
 import time
 from datetime import datetime, timedelta
 import packml
+
 
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BOARD)
@@ -152,6 +152,9 @@ class PickBox:
         self.pir_controller = PirThread(pir_pin)
         self.pir_controller.start()
 
+    def get_selected(self):
+        return self.selected
+
     def set_content(self, content_id, content_count):
         self.box_data['content_id'] = content_id
         self.box_data['content_count'] = content_count
@@ -171,6 +174,9 @@ class PickBox:
         
         # else set flag 
         self.selected = True
+
+        #update opcua tags
+        self.update_opcua()
 
         #check if pir sensor is ready 
         if timeout:
@@ -211,8 +217,19 @@ class PickBox:
         # turn off LED
         self.led_controler.set_state(False)
         
+        #update opcua tags
+        self.update_opcua()
+        
         # Return success
         return signal
+
+    def update_opcua(self):
+        try:
+            # get "me" in the status tags
+            me = packml.server.get_node(self.box_data['name'])
+
+        except KeyError:
+            packml.server.get_node()
 
     def calibrate(self):
         '''
@@ -221,26 +238,39 @@ class PickBox:
         pass
 
 
+
+
+
 class PickByLight:
     def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
         self.thingworx_name = thingworx_name
         
         #get packml folder 
-        self.pml_folder = packml.pml_folder
-
-        #create an OPC name 
-        opc_name = self.thingworx_name
-
-        # create an obejct in the pacml module using our unique name
-        self.packml_obj = packml.pml_folder.add_object(packml.idx, opc_name)
-
-        # create a variable inside the newly created object.
-        self.a_var = self.packml_obj.add_variable(packml.idx, 'selected', False)
+        pml_folder = packml.pml_folder
 
         #create a method on opcua
-        select_method = self.packml_obj.add_method(packml.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
- 
+        select_method = pml_folder.add_method(packml.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+
+        #generate induvidual pick box tags
+        self._generate_tags()
+    
+    def _generate_tags(self):
+        """private function that generates tags for all the pick boxes
+        """
+        for b_id, box in self.boxes.items():
+            #try to get box name
+            if 'name' in box.box_data:
+                b_name = str(box.box_data['name'])
+            # else use id as nome
+            else: b_name = str(b_id)
+
+            # create an obejct in the pacml status object using our unique name
+            b_obj = packml.Status.add_object(packml.idx, b_name)
+
+            # create variables inside the newly created object.
+            b_obj.add_variable(packml.idx, 'selected', box.get_selected, ua.VariantType.Boolean)
+
     def get_box_by_name(self, name):
         pass
     
