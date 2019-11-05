@@ -17,7 +17,16 @@ elif GPIO.getmode() == GPIO.BOARD:
 else:
     raise Exception('GPIO.mode is set to some unknown mode. This library needs BORD mode. I didn\'t try to change it ')
 
+try:
+    from IPython import embed
+except ImportError:
+    import code
 
+    def embed():
+        myvars = globals()
+        myvars.update(locals())
+        shell = code.InteractiveConsole(myvars)
+        shell.interact()
 
 
 def run_async(func):
@@ -229,9 +238,9 @@ class PickByLight:
         self.thingworx_name = thingworx_name  
         self.ua_server_setup()
         self.ua_parameter_list = {}
-        self._generate_tags()
+        #self._generate_tags()
         self.start_server()
-        self._generate_subscriptions()
+        #self._generate_subscriptions()
 
     def get_box_by_name(self, name):
         pass
@@ -301,9 +310,11 @@ class PickByLight:
         self.idx =  self.server.register_namespace(_idx_name)
         #set all possible endpoint policies for clienst to connect through
         self.server.set_security_policy([
-            ua.SecurityPolicyType.NoSecurity,
-            ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
-            ua.SecurityPolicyType.Basic256Sha256_Sign])
+           	ua.SecurityPolicyType.NoSecurity,
+            ua.SecurityPolicyType.Basic128Rsa15_SignAndEncrypt,
+            ua.SecurityPolicyType.Basic128Rsa15_Sign,
+            ua.SecurityPolicyType.Basic256_SignAndEncrypt,
+            ua.SecurityPolicyType.Basic256_Sign])
 
         # get Objects node, this is where we should put our custom stuff
         objects =  self.server.get_objects_node()

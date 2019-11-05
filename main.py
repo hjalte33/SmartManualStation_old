@@ -81,7 +81,7 @@ if __name__ == "__main__":
     pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
 
 
-
+    sleep(900)
 
 
 
