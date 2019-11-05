@@ -2,7 +2,8 @@ from pick_box import PickBox, PickByLight
 from time import sleep
 import yaml
 import warnings
-import packml
+#import packml
+import ua_server
 
 
 def read_config(pin_path = 'pin_config.yaml', box_path = 'box_config.yaml'):
@@ -78,9 +79,9 @@ if __name__ == "__main__":
     boxes = read_config()
 
     pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
-    packml.server.start()
 
-    #pbl.postServerStart()
+
+
 
 
 

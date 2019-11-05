@@ -1,9 +1,11 @@
 import RPi.GPIO as GPIO
-from opcua import ua, uamethod
+from opcua import ua, uamethod, Server
+from opcua.common.type_dictionary_buider import DataTypeDictionaryBuilder, get_ua_class
+
 import threading
 import time
 from datetime import datetime, timedelta
-import packml
+
 
 
 if not GPIO.getmode():
@@ -98,7 +100,6 @@ class LedThread(threading.Thread):
         # clear the runtime command
         self.run_time = 0
 
-
 class PirThread(threading.Thread):
     def __init__(self,pir_pin):
         '''constructor'''
@@ -127,7 +128,6 @@ class PirThread(threading.Thread):
 
     def callback(self,pin):
         self._activity.set()    
-
 
 class PickBox:
     def __init__(self, pir_pin, led_pin, box_id, box_data:dict):
@@ -175,9 +175,6 @@ class PickBox:
         # else set flag 
         self.selected = True
 
-        #update opcua tags
-        self.update_opcua()
-
         #check if pir sensor is ready 
         if timeout:
 
@@ -217,19 +214,8 @@ class PickBox:
         # turn off LED
         self.led_controler.set_state(False)
         
-        #update opcua tags
-        self.update_opcua()
-        
         # Return success
         return signal
-
-    def update_opcua(self):
-        try:
-            # get "me" in the status tags
-            me = packml.server.get_node(self.box_data['name'])
-
-        except KeyError:
-            packml.server.get_node()
 
     def calibrate(self):
         '''
@@ -237,39 +223,15 @@ class PickBox:
         '''
         pass
 
-
-
-
-
 class PickByLight:
     def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
-        self.thingworx_name = thingworx_name
-        
-        #get packml folder 
-        pml_folder = packml.pml_folder
-
-        #create a method on opcua
-        select_method = pml_folder.add_method(packml.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
-
-        #generate induvidual pick box tags
+        self.thingworx_name = thingworx_name  
+        self.ua_server_setup()
+        self.ua_parameter_list = {}
         self._generate_tags()
-    
-    def _generate_tags(self):
-        """private function that generates tags for all the pick boxes
-        """
-        for b_id, box in self.boxes.items():
-            #try to get box name
-            if 'name' in box.box_data:
-                b_name = str(box.box_data['name'])
-            # else use id as nome
-            else: b_name = str(b_id)
-
-            # create an obejct in the pacml status object using our unique name
-            b_obj = packml.Status.add_object(packml.idx, b_name)
-
-            # create variables inside the newly created object.
-            b_obj.add_variable(packml.idx, 'selected', box.get_selected, ua.VariantType.Boolean)
+        self.start_server()
+        self._generate_subscriptions()
 
     def get_box_by_name(self, name):
         pass
@@ -288,9 +250,76 @@ class PickByLight:
 
     def select_box_by_id(self, parent, id):
         try:
-            self.boxes[id.Value].select()
+            self.boxes[id].select()
         except KeyError:
-            print('404 box not found')           
+            print('404 box not found')  
+    
+    def start_server(self):
+        self.server.start()
+
+    def datachange_notification(self, node, val, data):
+        print("Python: New data change event", node, val)
+
+    def event_notification(self, event):
+        print("Python: New event", event)
+
+    def _generate_subscriptions(self):
+        sub = self.server.create_subscription(500, self)
+        handle = sub.subscribe_data_change(self.ua_parameter_list["1_selectMethod"])
+
+    def _generate_tags(self):
+        """private function that generates tags for all the pick boxes
+        """
+        # for boxid, box in all boxes list
+        for b_id, box in self.boxes.items():
+            # use the id as box name
+            b_name = str(b_id)
+
+            # create an obejct in the pacml status object using our unique name
+            b_idx = 'pickBox.' + b_name + '.'
+            b_obj = self.Status.add_object("ns=2;s=%s" % b_idx, b_name)
+
+            # create variables inside the newly created object.
+            s_idx = b_idx + "selected"
+            b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'selected', box.get_selected, ua.VariantType.Boolean)
+            #b_var.set_writeable()
+            self.ua_parameter_list[b_name + '_selected'] = b_var
+            s_idx = b_idx + "selectMethod"
+            b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'selectMethod', box.get_selected, ua.VariantType.Boolean)
+            #b_var.set_writeable()
+            self.ua_parameter_list[b_name + '_selectMethod'] = b_var
+
+    def ua_server_setup(self):
+        self.server = Server('./opcua_cache')
+
+        self.server.set_endpoint('opc.tcp://localhost:4840/UA/PickByLight')
+        self.server.set_server_name("Pick By Light Server")
+
+        # idx name will be used later for creating the xml used in data type dictionary
+        # setup our own namespace, not really necessary but should as spec
+        _idx_name = 'http://examples.freeopcua.github.io'
+        self.idx =  self.server.register_namespace(_idx_name)
+        #set all possible endpoint policies for clienst to connect through
+        self.server.set_security_policy([
+            ua.SecurityPolicyType.NoSecurity,
+            ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
+            ua.SecurityPolicyType.Basic256Sha256_Sign])
+
+        # get Objects node, this is where we should put our custom stuff
+        objects =  self.server.get_objects_node()
+        # add a PackMLObjecs folder
+        self.pml_folder =  objects.add_folder(self.idx, "PackMLObjects")
+
+        # Get the base type object
+        types =  self.server.get_node(ua.ObjectIds.BaseObjectType)
+        # Create a new type for PackMLObjects
+        self.PackMLBaseObjectType =  types.add_object_type(self.idx, "PackMLBaseObjectType")
+        self.Admin =  self.pml_folder.add_object(self.idx, "Admin", self.PackMLBaseObjectType.nodeid)
+        self.Status =  self.pml_folder.add_object(self.idx, "Status", self.PackMLBaseObjectType.nodeid)
+
+        #create a method on opcua TODO insert the cerrect callback function.
+        self.select_method = self.pml_folder.add_method(self.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+          
             
         
 
