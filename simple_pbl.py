@@ -57,13 +57,15 @@ class PickBox:
     
         self.selected = False
         self.pir_activity = False
+        self.pir_ready = True
         self.wrong_pick = False
         
         
         # GPIO setup
+        GPIO.setwarnings(False)
         GPIO.setup(self.pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.led_pin, GPIO.OUT)
-        GPIO.setwarnings(False)
+
 
         # Add interupt and callback function when there's a change on the pir pin. 
         GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=self.pir_callback)
@@ -87,13 +89,25 @@ class PickBox:
             self.wrong_pick = False
 
     def pir_callback(self,pin):
+        if self.pir_ready:
+            Thread(target=self.pir_sleeper, daemon=True, args=(pin,)).start()
+        pass
+
+    def pir_sleeper(self,pin):
+        """sleeps while the pir is stabalizing
+        
+        Arguments:
+            pin {int} -- pin of trigger
+        """ 
         if 1 == GPIO.input(self.pir_pin):
             print('Pir detected on box: %s' % self.box_id)
             self.pir_activity = True
+            self.pir_ready = False
             sleep(5)  
         if 0 == GPIO.input(self.pir_pin):
             self.pir_activity = False
-        
+        self.pir_ready = True
+
     def toggle_led(self):
         led_next = not GPIO.input(self.led_pin)
         GPIO.output(self.led_pin, led_next)
