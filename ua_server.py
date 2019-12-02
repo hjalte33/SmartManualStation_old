@@ -63,9 +63,9 @@ class VarUpdater(Thread):
 
     def run(self):
         while not self._stopev:
-            v = sin(time.time() / 10)
+            v = time.time()
             self.var.set_value(v)
-            time.sleep(0.1)
+            time.sleep(1)
 
 
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # logger.setLevel(logging.DEBUG)
 
     # now setup our server
-    server = Server()
+    server = Server('./opcua_cache')
     #server.disable_clock()
     #server.set_endpoint("opc.tcp://localhost:4840/freeopcua/server/")
     server.set_endpoint("opc.tcp://0.0.0.0:4840/freeopcua/server/")
@@ -124,17 +124,17 @@ if __name__ == "__main__":
     myarrayvar = myobj.add_variable(idx, "myarrayvar", [6.7, 7.9])
     myarrayvar = myobj.add_variable(idx, "myStronglytTypedVariable", ua.Variant([], ua.VariantType.UInt32))
     myprop = myobj.add_property(idx, "myproperty", "I am a property")
-    mymethod = myobj.add_method(idx, "mymethod", func, [ua.VariantType.Int64], [ua.VariantType.Boolean])
-    multiply_node = myobj.add_method(idx, "multiply", multiply, [ua.VariantType.Int64, ua.VariantType.Int64], [ua.VariantType.Int64])
+    #mymethod = myobj.add_method(idx, "mymethod", func, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+    #multiply_node = myobj.add_method(idx, "multiply", multiply, [ua.VariantType.Int64, ua.VariantType.Int64], [ua.VariantType.Int64])
 
     # import some nodes from xml
-    server.import_xml("custom_nodes.xml")
+    #server.import_xml("custom_nodes.xml")
 
     # creating a default event object
     # The event object automatically will have members for all events properties
     # you probably want to create a custom event type, see other examples
-    myevgen = server.get_event_generator()
-    myevgen.event.Severity = 300
+    #myevgen = server.get_event_generator()
+    #myevgen.event.Severity = 300
 
     # starting!
     server.start()
@@ -152,10 +152,12 @@ if __name__ == "__main__":
         var.append(9.3)
         myarrayvar.set_value(var)
         mydevice_var.set_value("Running")
-        myevgen.trigger(message="This is BaseEvent")
+        #myevgen.trigger(message="This is BaseEvent")
         server.set_attribute_value(myvar.nodeid, ua.DataValue(9.9))  # Server side write method which is a but faster than using set_value
 
-        embed()
+        while True:
+            time.sleep(1)
+
     finally:
         vup.stop()
         server.stop()

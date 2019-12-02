@@ -6,6 +6,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 
+import re
 
 
 if not GPIO.getmode():
@@ -16,17 +17,6 @@ elif GPIO.getmode() == GPIO.BOARD:
     raise Exception('GPIO.mode is set to BCM mode. This library needs BORD mode. I didn\'t try to change it ')
 else:
     raise Exception('GPIO.mode is set to some unknown mode. This library needs BORD mode. I didn\'t try to change it ')
-
-try:
-    from IPython import embed
-except ImportError:
-    import code
-
-    def embed():
-        myvars = globals()
-        myvars.update(locals())
-        shell = code.InteractiveConsole(myvars)
-        shell.interact()
 
 
 def run_async(func):
@@ -80,7 +70,12 @@ class LedThread(threading.Thread):
         GPIO.output(self.led_pin, state)
 
     def blink(self,**kwarg):
-        raise Warning('blink function not implemented yet. Doing nothing.')
+        self.selected = True
+        self.on_time = 0.8
+        self.off_time = 0.3
+        self.finish_off = False
+        self.count = 80000
+        
 
     def run(self):
         while True:
@@ -116,7 +111,7 @@ class PirThread(threading.Thread):
         self.daemon = True
         self.pir_pin = pir_pin
         self._activity = threading.Event()
-        self.bounce_time = 4000 #ms  takes the sensor about 5 sec to get stable readings. 
+        self.bounce_time = 5000 #ms  takes the sensor about 5 sec to get stable readings. 
 
     @property
     def activity(self):
@@ -139,13 +134,14 @@ class PirThread(threading.Thread):
         self._activity.set()    
 
 class PickBox:
-    def __init__(self, pir_pin, led_pin, box_id, box_data:dict):
+    def __init__(self,  pir_pin, led_pin, box_id, box_data:dict):
         self.box_id = box_id
         self.box_data = box_data
         self.box_data['id'] = self.box_id # double the info into the box data as well.
         self.__pir_pin = pir_pin
         self.__led_pin = led_pin
         self.selected = False
+        self.b_idx = 'PickBox.' + str(box_id) 
         
         # GPIO setup
         GPIO.setup(self.__pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -153,16 +149,16 @@ class PickBox:
         GPIO.setwarnings(False)
 
         # start the LED thread
-        self.led_controler = LedThread(led_pin)
-        self.led_controler.set_state(0)
-        self.led_controler.start()
+        self.led_controller = LedThread(led_pin)
+        self.led_controller.set_state(0)
+        self.led_controller.start()
 
         # start the pir monitoring thread.
         self.pir_controller = PirThread(pir_pin)
         self.pir_controller.start()
 
-    def get_selected(self):
-        return self.selected
+    def create_select_node (self,node : ua.NodeReference):
+        self.selected_node = node
 
     def set_content(self, content_id, content_count):
         self.box_data['content_id'] = content_id
@@ -174,15 +170,16 @@ class PickBox:
     def get_content(self):
         return (self.box_data['content_id'], self.box_data['content_count'])
     
+    @run_async
     def select(self,timeout = None):
-        if type(timeout) == ua.Variant:
-            timeout = timeout.Value
-
         # check if we are alreade selected 
         if self.selected : return True
         
         # else set flag 
         self.selected = True
+        
+        # Update opcua tag 
+        self.selected_node.set_value(self.selected)
 
         #check if pir sensor is ready 
         if timeout:
@@ -191,7 +188,7 @@ class PickBox:
             _time_before = datetime.now()
             _timeout  = _time_before + timedelta(seconds = timeout)
 
-            # busy waiting for pir sensor (usually only short time so it doesn't matter it's busy waiting.)
+            # busy waiting for pir sensor (usually only short time so it doesn't matter it's busy waiting.)  
             while not self.pir_controller.is_ready:
                 if datetime.now() >= _timeout:
                     # If main timeout while we wait for pir return false 
@@ -204,10 +201,10 @@ class PickBox:
 
         # set LED parameters
         self.selected = True
-        self.led_controler.on_time = 0.5
-        self.led_controler.off_time = 0.5
+        self.led_controler.on_time = 0.8
+        self.led_controler.off_time = 0.3
         self.led_controler.finish_off = False
-        self.led_controler.count = 20
+        self.led_controler.count = 80
         print('selected box %s, now waiting for pir sensor' % self.box_id)
 
         signal = self.pir_controller._activity.wait(timeout)
@@ -219,6 +216,9 @@ class PickBox:
         
         # set internal flag
         self.selected = False
+
+        # Update opcua tag 
+        self.selected_node.set_value(self.selected)
         
         # turn off LED
         self.led_controler.set_state(False)
@@ -226,21 +226,16 @@ class PickBox:
         # Return success
         return signal
 
-    def calibrate(self):
-        '''
-            not implemented. ToDo
-        '''
-        pass
-
 class PickByLight:
     def __init__(self,boxes, thingworx_name):
         self.boxes = boxes
         self.thingworx_name = thingworx_name  
         self.ua_server_setup()
-        self.ua_parameter_list = {}
-        #self._generate_tags()
+        self.ua_parameter_dict = {}
+        self.ua_method_dict = {}
+        self._generate_tags()
         self.start_server()
-        #self._generate_subscriptions()
+        self._generate_subscriptions()
 
     def get_box_by_name(self, name):
         pass
@@ -268,46 +263,59 @@ class PickByLight:
 
     def datachange_notification(self, node, val, data):
         print("Python: New data change event", node, val)
+        # reset the value 
+        node.set_value(False)
+
+        if val is True: 
+            # get the node identifier string
+            node_id = node.nodeid.Identifier
+            
+            #extract the boxid
+            search = re.search('PickBox\\.(\\d)',node_id, re.IGNORECASE)
+            box_id = search.group(1)
+
+            # call the select method for the given box 
+            self.boxes[int(box_id)].select()
 
     def event_notification(self, event):
         print("Python: New event", event)
 
     def _generate_subscriptions(self):
-        sub = self.server.create_subscription(500, self)
-        handle = sub.subscribe_data_change(self.ua_parameter_list["1_selectMethod"])
+        for method_name, node in self.ua_method_dict.items():
+            sub = self.server.create_subscription(200, self)
+            handle = sub.subscribe_data_change(self.ua_method_dict[method_name])
 
     def _generate_tags(self):
         """private function that generates tags for all the pick boxes
         """
         # for boxid, box in all boxes list
         for b_id, box in self.boxes.items():
-            # use the id as box name
-            b_name = str(b_id)
 
-            # create an obejct in the pacml status object using our unique name
-            b_idx = 'pickBox.' + b_name + '.'
-            b_obj = self.Status.add_object("ns=2;s=%s" % b_idx, b_name)
+            # create an obejct in the pacml status object using our unique box idx
+            b_obj = self.Status.add_object("ns=2;s=%s" % box.b_idx, box.b_idx)
 
             # create variables inside the newly created object.
-            s_idx = b_idx + "selected"
-            b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'selected', box.get_selected, ua.VariantType.Boolean)
-            #b_var.set_writeable()
-            self.ua_parameter_list[b_name + '_selected'] = b_var
-            s_idx = b_idx + "selectMethod"
-            b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'selectMethod', box.get_selected, ua.VariantType.Boolean)
-            #b_var.set_writeable()
-            self.ua_parameter_list[b_name + '_selectMethod'] = b_var
+            s_idx = box.b_idx + ".Selected"
+            box.selected_node = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Selected', box.selected, ua.VariantType.Boolean)
+            box.selected_node.set_writable()
+
+            # Create a tag for triggering the selection
+            s_idx = box.b_idx + ".SelectMethod"
+            b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'SelectMethod', False, ua.VariantType.Boolean)
+            b_var.set_writable()
+            self.ua_method_dict[s_idx] = b_var
 
     def ua_server_setup(self):
         self.server = Server('./opcua_cache')
 
-        self.server.set_endpoint('opc.tcp://localhost:4840/UA/PickByLight')
+        self.server.set_endpoint('opc.tcp://0.0.0.0:4840/UA/PickByLight')
         self.server.set_server_name("Pick By Light Server")
 
         # idx name will be used later for creating the xml used in data type dictionary
         # setup our own namespace, not really necessary but should as spec
         _idx_name = 'http://examples.freeopcua.github.io'
         self.idx =  self.server.register_namespace(_idx_name)
+        
         #set all possible endpoint policies for clienst to connect through
         self.server.set_security_policy([
            	ua.SecurityPolicyType.NoSecurity,
@@ -320,22 +328,16 @@ class PickByLight:
         objects =  self.server.get_objects_node()
         # add a PackMLObjecs folder
         self.pml_folder =  objects.add_folder(self.idx, "PackMLObjects")
-
         # Get the base type object
         types =  self.server.get_node(ua.ObjectIds.BaseObjectType)
         # Create a new type for PackMLObjects
         self.PackMLBaseObjectType =  types.add_object_type(self.idx, "PackMLBaseObjectType")
         self.Admin =  self.pml_folder.add_object(self.idx, "Admin", self.PackMLBaseObjectType.nodeid)
         self.Status =  self.pml_folder.add_object(self.idx, "Status", self.PackMLBaseObjectType.nodeid)
-
-        #create a method on opcua TODO insert the cerrect callback function.
-        self.select_method = self.pml_folder.add_method(self.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
-          
-            
         
 
-
-
+        ## Create a method on opcua TODO insert the cerrect callback function.
+        #self.select_method = self.pml_folder.add_method(self.idx,'select_box_by_id', self.select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
 
 
 

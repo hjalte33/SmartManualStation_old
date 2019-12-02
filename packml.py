@@ -6,7 +6,7 @@ import time
 
 
 server = Server('./opcua_cache')
-server.init()
+
 
 server.set_endpoint('opc.tcp://localhost:4840/UA/PickByLight')
 server.set_server_name("Pick By Light Server")
@@ -34,7 +34,7 @@ Admin =  pml_folder.add_object(idx, "Admin", PackMLBaseObjectType.nodeid)
 Status =  pml_folder.add_object(idx, "Status", PackMLBaseObjectType.nodeid)
 
 #create a method on opcua TODO insert the cerrect callback function.
-select_method = pml_folder.add_method(packml.idx,'select_box_by_id', select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
+#select_method = pml_folder.add_method(packml.idx,'select_box_by_id', select_box_by_id, [ua.VariantType.Int64], [ua.VariantType.Boolean])
 
 # # add one basic structure. This should probaly be moved the the packml server class. 
 # basic_struct_name = 'basic_parameter'
@@ -46,7 +46,7 @@ select_method = pml_folder.add_method(packml.idx,'select_box_by_id', select_box_
 
 # this operation will write the OPC dict string to our new data type dictionary
 # namely the 'MyDictionary'
-dict_builder.set_dict_byte_string()
+##dict_builder.set_dict_byte_string()
 
 # create new nodes
 # status_node = pml_server.server.nodes.base_object_type.add_object(idx, 'Status').set_modelling_rule(True)
@@ -76,4 +76,14 @@ def _generate_tags(self):
         b_obj.add_variable(packml.idx, 'selected', box.get_selected, ua.VariantType.Boolean)
 
 
+
+if __name__ == '__main__':
+    server.start()
+    try:
+        
+        while True:
+            time.sleep(1)
+    finally:
+        #close connection, remove subcsriptions, etc
+        server.stop()
 
