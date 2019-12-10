@@ -487,6 +487,12 @@ for box_id in box_ids:
     n = server.get_node("ns=2;s=%s" % s_idx)
     sub.subscribe_data_change(n)
 
+     # Set String_idx to DeSelect tag
+    s_idx = b_idx + ".DeSelect"
+    # Subscribe to the Select tag
+    n = server.get_node("ns=2;s=%s" % s_idx)
+    sub.subscribe_data_change(n)
+
      # Set String_idx to Clear Wrong Pick tag
     s_idx = b_idx + ".ClearWrongPick"
     # Subscribe to the Select tag
