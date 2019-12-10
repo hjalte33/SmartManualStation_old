@@ -88,13 +88,19 @@ class PickBox:
         # called again, that's why this if statement checks if the value is True 
         # so the method does not call itself continuously. 
         if node_id == "Select" and val == True:
-            self.selected = val
+            self.selected = True
             self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'Select'), False)
         # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
         # Also read description above. 
         if node_id == "ClearWrongPick" and val == True:
             self.wrong_pick = False
             self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'ClearWrongPick'),False)
+        
+        # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
+        # Also read description above. 
+        if node_id == "DeSelect" and val == True:
+            self.selected = False
+            self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'DeSelect'),False)
 
     def pir_callback(self,pin):
         """Callback for activity on the pir sensor.
@@ -223,6 +229,17 @@ class SimplePBL:
         else: raise IndexError
 
     def get_boxes_from_config(self, pin_conf_path, box_conf_path):
+        """Private function.
+           Read the pin and box config files and  phrases them.
+           The function returns a list of pickBox objects.
+        
+        Arguments:
+            pin_conf_path {string} -- path to pin conf yaml file
+            box_conf_path {string} -- path to box conf yaml file.
+        
+        Returns:
+            [pickBox] -- list of pickBox objects.
+        """
         boxes_to_return = []
         try:
             # load the pin config file
@@ -288,7 +305,7 @@ class SimplePBL:
         the_box = [x for x in self.boxes if x.box_id == box_id]
         
         try:
-            result = getattr(the_box[0],attr)
+            return getattr(the_box[0],attr)
 
         # If the attribute does not exist don't worry, just return None. 
         # This makes sense if one box has information that other boxes does not have 
@@ -441,6 +458,10 @@ for box_id in box_ids:
     # Create command tag for triggering the selection
     s_idx = b_idx + ".Select"
     b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Boolean)
+    b_var.set_writable()
+
+    s_idx = b_idx + ".DeSelect"
+    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'DeSelect', False, ua.VariantType.Boolean)
     b_var.set_writable()
 
     s_idx = b_idx + ".ClearWrongPick"
