@@ -200,13 +200,13 @@ class SimplePBL:
         # Also read description above. 
         if node_id == "ClearWrongPick" :
             self.wrong_pick = False
-            self.update_ua_var('Command.Boxes.ClearWrongPick'),-1)
+            self.update_ua_var('Command.Boxes.ClearWrongPick', -1)
         
         # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
         # Also read description above. 
         if node_id == "DeSelect" :
             self.select_box(val, False)
-            self.update_ua_var('Command.Boxes.DeSelect'),-1)
+            self.update_ua_var('Command.Boxes.DeSelect', -1)
 
 
     def get_all_box_ids(self):
@@ -379,11 +379,17 @@ class SimplePBL:
     def update_ua_status(self, name, value):
         node_id = 'Status.Boxes.%s.%s' % (self.box_id, name)
         self.update_ua_var(node_id,value)
-    
+
     def update_ua_var(self, node_id, value):
+        """Update any variable on the ua server.
+        
+        Arguments:
+            node_id {string} -- node id for the tag. 
+            value {} -- value of the tag. Make sure it matches the ua tag type.
+        """
         try:
             node_id = 'ns=2;s=%s' % node_id
-            node = self.parent.server.get_node(node_id)
+            node = self.server.get_node(node_id)
             node.set_value(value)
         except RuntimeError as e:
             warnings.warn('error setting ua var on node %s' % node_id)
@@ -427,7 +433,6 @@ Command =  pml_folder.add_object('ns=2;s=Command', "Command", PackMLBaseObjectTy
 # Create an object for the boxes in both the command and status object 
 BoxesStatus = Status.add_object('ns=2;s=Status.Boxes', 'Boxes')
 BoxesCommonStatus = BoxesStatus.add_object('ns=2;s=Status.Boxes.Common', 'Common')
-BoxesCommand = Command.add_object('ns=2;s=Command.Boxes', 'Boxes')
 
 
 # create instance of Simple Pick By Light
@@ -457,9 +462,9 @@ for box_id in box_ids:
 create command tags. This is because kepware does not support ua methods. 
 '''
 # change to command tags
-b_idx = 'Command.Boxes
+b_idx = 'Command.Boxes'
 # create an object in the packml Command object called Boxes for all the box commands. 
-b_obj = BoxesCommand.add_object("ns=2;s=%s" % b_idx, str(box_id))
+b_obj = Command.add_object("ns=2;s=%s" % b_idx, 'Boxes')
 # Create command tag for triggering the selection
 s_idx = b_idx + ".Select"
 b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Int16)
@@ -480,7 +485,7 @@ server.start()
 # TODO change this into a function that loops through a list of commands. 
 
 # set box_idx to command tags
-b_idx = 'Command.Boxes
+b_idx = 'Command.Boxes'
 
 # Create UA subscriber node for the box
 sub = server.create_subscription(100, aau_pbl)
