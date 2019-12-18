@@ -64,43 +64,6 @@ class PickBox:
             self.update_ua_status('WrongPick', value)
         super(PickBox, self).__setattr__(name, value)
 
-    def datachange_notification(self, node: Node, val, data):
-        """UA server callback on data change notifications
-            This is a workaround for kepware that does not support 
-            UA methods, so instead is has "trigger tags" that when 
-            set to true it works like calling a method. 
-            TODO make this more dynamic instead of hard coding the attributes. 
-        
-        Arguments:
-            node {Node} -- [description]
-            val {[type]} -- [description]
-            data {[type]} -- [description]
-        """
-
-        # Print info
-        print("Python: New data change event", node, val)
-        
-        # get the node browse name. 
-        node_id = node.get_browse_name().Name
-
-        # If the trigger tag changes to true go in and update the select tag and set
-        # the trigger back to false. When setting it back to false this method gets
-        # called again, that's why this if statement checks if the value is True 
-        # so the method does not call itself continuously. 
-        if node_id == "Select" and val == True:
-            self.selected = True
-            self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'Select'), False)
-        # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
-        # Also read description above. 
-        if node_id == "ClearWrongPick" and val == True:
-            self.wrong_pick = False
-            self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'ClearWrongPick'),False)
-        
-        # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
-        # Also read description above. 
-        if node_id == "DeSelect" and val == True:
-            self.selected = False
-            self.update_ua_var('Command.Boxes.%s.%s' % (self.box_id, 'DeSelect'),False)
 
     def pir_callback(self,pin):
         """Callback for activity on the pir sensor.
@@ -206,6 +169,45 @@ class SimplePBL:
         if name == 'selected':
             self.update_ua_status('Selected', value)
         super(SimplePBL, self).__setattr__(name, value)
+
+    def datachange_notification(self, node: Node, val, data):
+        """UA server callback on data change notifications
+            This is a workaround for kepware that does not support 
+            UA methods, so instead is has "trigger tags" that when 
+            set to true it works like calling a method. 
+            TODO make this more dynamic instead of hard coding the attributes. 
+        
+        Arguments:
+            node {Node} -- [description]
+            val {[type]} -- [description]
+            data {[type]} -- [description]
+        """
+
+        # Print info
+        print("Python: New data change event", node, val)
+        
+        # get the node browse name. 
+        node_id = node.get_browse_name().Name
+
+        # If the trigger tag changes to true go in and update the select tag and set
+        # the trigger back to false. When setting it back to false this method gets
+        # called again, that's why this if statement checks if the value is True 
+        # so the method does not call itself continuously. 
+        if node_id == "Select" :
+            self.select_box(val)
+            self.update_ua_var('Command.Boxes.Select', -1)
+        # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
+        # Also read description above. 
+        if node_id == "ClearWrongPick" :
+            self.wrong_pick = False
+            self.update_ua_var('Command.Boxes.ClearWrongPick'),-1)
+        
+        # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
+        # Also read description above. 
+        if node_id == "DeSelect" :
+            self.select_box(val, False)
+            self.update_ua_var('Command.Boxes.DeSelect'),-1)
+
 
     def get_all_box_ids(self):
         """returns a list of all box ids
@@ -371,8 +373,8 @@ class SimplePBL:
                 warnings.warn('attribute %s does not exist on box_id %s' % (attr, box_id))
         else: warnings.warn('box_id %s does not exist' % box_id)
 
-    def select_box(self, box_id):
-        self.set_pick_box_attr(box_id, "selected", True)
+    def select_box(self, box_id, val = True):
+        self.set_pick_box_attr(box_id, "selected", val)
 
     def update_ua_status(self, name, value):
         node_id = 'Status.Boxes.%s.%s' % (self.box_id, name)
@@ -451,53 +453,54 @@ for box_id in box_ids:
     s_idx = b_idx + ".WrongPick"
     b_obj.add_variable("ns=2;s=%s" % s_idx, 'WrongPick', False, ua.VariantType.Boolean) 
 
-    # change to command tags now 
-    b_idx = 'Command.Boxes.%s' %box_id
+'''
+create command tags. This is because kepware does not support ua methods. 
+'''
+# change to command tags
+b_idx = 'Command.Boxes
+# create an object in the packml Command object called Boxes for all the box commands. 
+b_obj = BoxesCommand.add_object("ns=2;s=%s" % b_idx, str(box_id))
+# Create command tag for triggering the selection
+s_idx = b_idx + ".Select"
+b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Int16)
+b_var.set_writable()
 
-    b_obj = BoxesCommand.add_object("ns=2;s=%s" % b_idx, str(box_id))
-    # Create command tag for triggering the selection
-    s_idx = b_idx + ".Select"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Boolean)
-    b_var.set_writable()
+s_idx = b_idx + ".DeSelect"
+b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'DeSelect', False, ua.VariantType.Int16)
+b_var.set_writable()
 
-    s_idx = b_idx + ".DeSelect"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'DeSelect', False, ua.VariantType.Boolean)
-    b_var.set_writable()
-
-    s_idx = b_idx + ".ClearWrongPick"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', False, ua.VariantType.Boolean)
-    b_var.set_writable()
+s_idx = b_idx + ".ClearWrongPick"
+b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', False, ua.VariantType.Int16)
+b_var.set_writable()
 
 # Start the server 
 server.start()
 
 # create subscriptions 
 # TODO change this into a function that loops through a list of commands. 
-for box_id in box_ids:
-    box = aau_pbl.get_box_by_id(box_id)
-    
-    # set box_idx to command tags
-    b_idx = 'Command.Boxes.%s' %box_id
-    
-    # Create UA subscriber node for the box
-    sub = server.create_subscription(100, box)
-    # Set String_idx to Select tag
-    s_idx = b_idx + ".Select"
-    # Subscribe to the Select tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
 
-     # Set String_idx to DeSelect tag
-    s_idx = b_idx + ".DeSelect"
-    # Subscribe to the Select tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
+# set box_idx to command tags
+b_idx = 'Command.Boxes
 
-     # Set String_idx to Clear Wrong Pick tag
-    s_idx = b_idx + ".ClearWrongPick"
-    # Subscribe to the Select tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
+# Create UA subscriber node for the box
+sub = server.create_subscription(100, aau_pbl)
+# Set String_idx to Select tag
+s_idx = b_idx + ".Select"
+# Subscribe to the Select tag
+n = server.get_node("ns=2;s=%s" % s_idx)
+sub.subscribe_data_change(n)
+
+    # Set String_idx to DeSelect tag
+s_idx = b_idx + ".DeSelect"
+# Subscribe to the DeSelect tag
+n = server.get_node("ns=2;s=%s" % s_idx)
+sub.subscribe_data_change(n)
+
+    # Set String_idx to Clear Wrong Pick tag
+s_idx = b_idx + ".ClearWrongPick"
+# Subscribe to the Select tag
+n = server.get_node("ns=2;s=%s" % s_idx)
+sub.subscribe_data_change(n)
 
 
 
