@@ -204,9 +204,9 @@ class SimplePBL:
         
         # If the trigger tag changes to true go in and update the status tag and set the trigger back to false.
         # Also read description above. 
-        if node_id == "DeSelect" :
+        if node_id == "Deselect" :
             self.select_box(val, False)
-            self.update_ua_var('Command.Boxes.DeSelect', -1)
+            self.update_ua_var('Command.Boxes.Deselect', -1)
 
 
     def get_all_box_ids(self):
@@ -470,8 +470,8 @@ s_idx = b_idx + ".Select"
 b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Int16)
 b_var.set_writable()
 
-s_idx = b_idx + ".DeSelect"
-b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'DeSelect', False, ua.VariantType.Int16)
+s_idx = b_idx + ".Deselect"
+b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Deselect', False, ua.VariantType.Int16)
 b_var.set_writable()
 
 s_idx = b_idx + ".ClearWrongPick"
@@ -495,9 +495,9 @@ s_idx = b_idx + ".Select"
 n = server.get_node("ns=2;s=%s" % s_idx)
 sub.subscribe_data_change(n)
 
-    # Set String_idx to DeSelect tag
-s_idx = b_idx + ".DeSelect"
-# Subscribe to the DeSelect tag
+    # Set String_idx to Deselect tag
+s_idx = b_idx + ".Deselect"
+# Subscribe to the Deselect tag
 n = server.get_node("ns=2;s=%s" % s_idx)
 sub.subscribe_data_change(n)
 
