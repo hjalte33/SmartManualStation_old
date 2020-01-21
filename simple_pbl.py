@@ -158,7 +158,7 @@ class SimplePBL:
         self.boxes = self.get_boxes_from_config(pin_conf_path, box_conf_path)
         
         self.led_stop_blink = Event()
-        led_args = {'period': 500, 'scan_freq': 10, 'stop_event':self.led_stop_blink}
+        led_args = {'period_on': 2000, 'period_off': 300, 'scan_freq': 10, 'stop_event':self.led_stop_blink}
         Thread(target = self.update_leds, daemon=True, kwargs=led_args).start()
         
         self.wrong_pick = Event()
@@ -316,7 +316,7 @@ class SimplePBL:
             warnings.warn('attribute %s does not exist on box_id %s, returning None' % (attr, box_id))
             return None
 
-    def update_leds(self, period, scan_freq, stop_event: Event):
+    def update_leds(self, period_on, period_off, scan_freq, stop_event: Event):
         """Led update function. This function should be startet as a thread to update leds.
            The update is made "globally" so all the LEDs will blink in sync. 
         
@@ -327,10 +327,12 @@ class SimplePBL:
         """
         leds_last_cycle = datetime.now()
         leds_state = False
+        period = period_on
 
         while not stop_event.wait(timeout=1/scan_freq):      
             if datetime.now() > leds_last_cycle + timedelta(milliseconds=period):
                 leds_state = not leds_state
+                period = period_on if leds_state else period_off
                 leds_last_cycle = datetime.now()
 
             for box in self.boxes:
