@@ -393,7 +393,7 @@ class SimplePBL:
             warnings.warn('error setting ua var on node %s' % node_id)
             print(e) 
 
-class ua_server :
+class UA_server :
     # Create server instance 
     server = Server('./opcua_cache')
 
