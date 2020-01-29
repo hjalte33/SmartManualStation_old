@@ -1,15 +1,15 @@
 1:
-  name : upper_left
+  name : upper_right
   content_id : 300424
   quantity : 100
 
 2:
-  name : upper_right
+  name : upper_middle
   content_id : 302121
   quantity : 100
 
 3:
-  name : lower_left
+  name : upper_left
   content_id : 300124
   quantity : 100
 
@@ -19,11 +19,11 @@
   quantity : 100
 
 5:
-  name : lower_right
+  name : lower_middle
   content_id : 300324
   quantity : 100
 
 6:
-  name : lower_right
+  name : lower_left
   content_id : 300324
   quantity : 100

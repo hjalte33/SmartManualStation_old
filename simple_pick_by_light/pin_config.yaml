@@ -1,6 +1,13 @@
 # IMPORTANT!
 # DO NOT EDIT UNLESS YOU ARE INSTALLING A NEW "PLUG BOARD" FOR THE PICK BY LIGHT SETUP 
-# THESE PINS ARE FIXED AND ARE NOT NOMALLY CHANGED IN A RECONFIGURATION SCENARIO: 
+# THESE PINS ARE FIXED AND ARE NOT NORMALLY CHANGED IN A RECONFIGURATION SCENARIO: 
+#
+#  connector:
+#    led_pin: gpio pin
+#    pir_pin: gpio pin
+
+
+
 1:
   led_pin : 35
   pir_pin : 36
@@ -28,5 +35,8 @@
 7:
  led_pin : 21
  pir_pin : 24
+
+ 8: 
+ pir_pin : 26
 
 

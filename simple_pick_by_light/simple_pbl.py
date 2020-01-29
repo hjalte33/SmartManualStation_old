@@ -17,20 +17,104 @@ elif GPIO.getmode() == GPIO.BOARD:
 else:
     raise Exception('GPIO.mode is set to some unknown mode. This library needs BOARD mode. I didn\'t try to change it ')
 
+pin_config = {} # Dict for the pin config. Indexed by port number
+boxes = {} # Dict of boxes. indexed by port number
 
-  
+
+parameters = ('name','content_id','quantity','box_id',)
+
+def init(pin_conf_path = './pin_config.yaml', box_conf_path = './box_config.yaml'):
+    _load_pin_config(pin_conf_path)
+    _load_box_config(box_conf_path)
+
+
+def _load_pin_config (pin_conf_path):
+     try:
+        # load the pin config file
+        with open(pin_conf_path ,'r') as yamlfile:
+            pin_config = yaml.load(yamlfile)      
+
+    except FileNotFoundError as f:
+        raise('The pin configuration file: %s, could not be found' %f)
+
+    # loop through the pin configurations for each connector
+    # This loop verifies all settings make sense. 
+    for connector, args in pin_config.items():
+        
+        # Make sure the both pins are specified.
+        # If they are defined do nothing
+        if all(k in args for k in ('led_pin', 'pir_pin')):
+            pass
+        # Else give a warning about missing config params. 
+        elif 'led_pin' not in args:
+            warnings.warn('Port "%s" does not have the "led_pin" specified.' %connector)
+            
+        elif 'pir_pin' not in args:
+            warnings.warn('Port "%s" does not have the mandatory key "pir_pin". The port it skiped.' %connector)
+            pin_config.pop(connector, None)
+        else: 
+            warnings.warn('something went wrong in reading the pin config for port "%s". The port is skiped' %connector)
+            pin_config.pop(connector, None)
+    
+    global pin_config = pin_config
+
+def _load_box_config(box_conf_path):
+    # Try to load the box configuration. 
+    try:
+        # Load the box configuration 
+        with open(box_conf_path ,'r') as yamlfile:
+            box_config = yaml.load(yamlfile)
+        
+        # Go through the config box by box
+        for port_number, args in box_config.items():
+            # Try to fetch the pins
+            try:
+                print('Loading pir and led pins for box id %s ......' %)
+                pir_pin = pin_config[port_number]['pir_pin']
+                led_pin = pin_config[port_number]['led_pin']
+            except KeyError:
+                warnings.warn('"pin config" for box id %s was not found. Are you sure the pin config is formatted correctly?' %box_id)
+                # Go back to top and read next box config
+                continue
+
+            # Print the configs to terminal for easy debugging
+            print(args)
+
+            # Finally create the master data for the pick by light box
+            new_box = PickBox(self, pir_pin,led_pin, box_id, **args)
+
+            # Push the newly created box the the list of boxes. 
+            boxes_to_return.append(new_box)
+
+    except FileNotFoundError as f:
+        raise ('The box configuration file: %s, could not be found, any new pick by light boxes must be configured at run time' %f)
+
+    return boxes_to_return
+
+def get_pins(port_number):
+    try:
+        port_conf = pin_config.get(port_number,{})
+        if port_conf
+
+        # check if the led pin is configured.
+        if global pin_config[port_number]['led_pin']:
+            led_pin = global pin_config[port_number]['led_pin']
+        return(pir_pin,led_pin)
+    except KeyError as e:
+        pass
+   
+
 class PickBox:
     """Simple class holding all the basic functions needed for a single pick box
     
     Raises:
         ValueError: raise exception if wrong args are passed. 
     """
-    def __init__(self, parent,  pir_pin, led_pin, box_id, **kwargs):
+    def __init__(self,  port_number, **kwargs):
         # Set identification attributes
-        self.parent = parent
         self.pir_pin = pir_pin
         self.led_pin = led_pin
-        self.box_id = box_id
+        self.port_number = port_number
 
         # Set Status attributes 
         self.selected = False
@@ -38,13 +122,8 @@ class PickBox:
         self.pir_ready = True
         self.wrong_pick = False
 
-        # Set more attributes if passed to the pick box. 
-        whitelist = ['name', 'content_id', 'quantity']
-        for key, value in kwargs.items():
-            if key in whitelist:
-                setattr(self, key, value)
-            else:
-                raise ValueError("unexpected kwarg value", key)    
+        self.set_params(**kwargs)
+       
         
         # GPIO setup
         GPIO.setwarnings(False)
@@ -54,16 +133,24 @@ class PickBox:
         # Add interupt and callback function when there's a change on the pir pin. 
         GPIO.add_event_detect(self.pir_pin, GPIO.BOTH, callback=self.pir_callback)
     
-    # Automatically update ua parameters when status attributes changes
+    # TODO call callbacks upon change
     def __setattr__(self, name, value):
         if name == 'selected':
-            self.update_ua_status('Selected', value)
+            pass
         elif name == 'pir_activity':
-            self.update_ua_status('PirActivity', value)
+            pass
         elif name == 'wrong_pick':
-            self.update_ua_status('WrongPick', value)
+            pass
         super(PickBox, self).__setattr__(name, value)
 
+    def set_params (self,**kwargs):
+        # Set more attributes if passed to the pick box. 
+        whitelist = ['name', 'content_id', 'quantity']
+        for key, value in kwargs.items():
+            if key in whitelist:
+                setattr(self, key, value)
+            else:
+                raise ValueError("unexpected kwarg value", key)    
 
     def pir_callback(self,pin):
         """Callback for activity on the pir sensor.
@@ -84,12 +171,12 @@ class PickBox:
             pin {int} -- pin of trigger
         """ 
         if 1 == GPIO.input(self.pir_pin):
-            print('Pir detected on box: %s' % self.box_id)
+            print('Pir detected on box: %s' % self.port_number)
             self.pir_activity = True
             self.pir_ready = False
             self.selected = False
             sleep(5)  
-        if 0 == GPIO.input(self.pir_pin):
+        else:
             self.pir_activity = False
         self.pir_ready = True
 
@@ -110,7 +197,7 @@ class PickBox:
             name {string} -- status tag name.
             value {} -- Value of the tag. Make sure it matches the ua tag type.
         """
-        node_id = 'Status.Boxes.%s.%s' % (self.box_id, name)
+        node_id = 'Status.Boxes.%s.%s' % (self.port_number, name)
         self.update_ua_var(node_id,value)
     
     def update_ua_var(self, node_id, value):
@@ -393,114 +480,6 @@ class SimplePBL:
             warnings.warn('error setting ua var on node %s' % node_id)
             print(e) 
 
-class UA_server :
-    # Create server instance 
-    server = Server('./opcua_cache')
-
-    server.set_endpoint('opc.tcp://0.0.0.0:4840/UA/PickByLight')
-    server.set_server_name("Pick By Light Server")
-
-    # idx name will be used later for creating the xml used in data type dictionary
-    # setup our own namespace, not really necessary but should as spec
-    idx_name = 'http://examples.freeopcua.github.io'
-    idx =  server.register_namespace(idx_name)
-
-    # Set all possible endpoint policies for clients to connect through
-    server.set_security_policy([
-        ua.SecurityPolicyType.NoSecurity,
-        ua.SecurityPolicyType.Basic128Rsa15_SignAndEncrypt,
-        ua.SecurityPolicyType.Basic128Rsa15_Sign,
-        ua.SecurityPolicyType.Basic256_SignAndEncrypt,
-        ua.SecurityPolicyType.Basic256_Sign])
-
-    # get Objects node, this is where we should put our custom stuff
-    objects =  server.get_objects_node()
-    # add a PackMLObjects folder
-    pml_folder =  objects.add_folder(idx, "PackMLObjects")
-    # Get the base type object
-    types =  server.get_node(ua.ObjectIds.BaseObjectType)
-    # Create a new type for PackMLObjects
-    PackMLBaseObjectType =  types.add_object_type(idx, "PackMLBaseObjectType")
-    Admin =  pml_folder.add_object('ns=2;s=Admin', "Admin", PackMLBaseObjectType.nodeid)
-    Status =  pml_folder.add_object('ns=2;s=Status', "Status", PackMLBaseObjectType.nodeid)
-    Command =  pml_folder.add_object('ns=2;s=Command', "Command", PackMLBaseObjectType.nodeid)
-
-    # Create an object for the boxes in both the command and status object 
-    BoxesStatus = Status.add_object('ns=2;s=Status.Boxes', 'Boxes')
-    BoxesCommonStatus = BoxesStatus.add_object('ns=2;s=Status.Boxes.Common', 'Common')
-
-
-    # create instance of Simple Pick By Light
-    aau_pbl = SimplePBL(server = server)
-
-    # Get all boxes
-    box_ids = aau_pbl.get_all_box_ids()
-
-    # for all boxes generate tags
-    for box_id in box_ids:
-        b_idx = 'Status.Boxes.%s' %box_id
-        # create an object in the packml status object using our unique box idx
-        b_obj = BoxesStatus.add_object("ns=2;s=%s" % b_idx, str(box_id))
-        
-        # TODO make this a loop that looks up tags from a list of tags 
-        # Create Status tags 
-        s_idx = b_idx + ".Selected"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'Selected', False, ua.VariantType.Boolean)
-
-        s_idx = b_idx + ".PirActivity"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'PirActivity', False, ua.VariantType.Boolean)    
-
-        s_idx = b_idx + ".WrongPick"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'WrongPick', False, ua.VariantType.Boolean) 
-
-    '''
-    create command tags. This is because kepware does not support ua methods. 
-    '''
-    # change to command tags
-    b_idx = 'Command.Boxes'
-    # create an object in the packml Command object called Boxes for all the box commands. 
-    b_obj = Command.add_object("ns=2;s=%s" % b_idx, 'Boxes')
-    # Create command tag for triggering the selection
-    s_idx = b_idx + ".Select"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Int16)
-    b_var.set_writable()
-
-    s_idx = b_idx + ".Deselect"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Deselect', False, ua.VariantType.Int16)
-    b_var.set_writable()
-
-    s_idx = b_idx + ".ClearWrongPick"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', False, ua.VariantType.Int16)
-    b_var.set_writable()
-
-    # Start the server 
-    server.start()
-
-    # create subscriptions 
-    # TODO change this into a function that loops through a list of commands. 
-
-    # set box_idx to command tags
-    b_idx = 'Command.Boxes'
-
-    # Create UA subscriber node for the box
-    sub = server.create_subscription(100, aau_pbl)
-    # Set String_idx to Select tag
-    s_idx = b_idx + ".Select"
-    # Subscribe to the Select tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
-
-        # Set String_idx to Deselect tag
-    s_idx = b_idx + ".Deselect"
-    # Subscribe to the Deselect tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
-
-        # Set String_idx to Clear Wrong Pick tag
-    s_idx = b_idx + ".ClearWrongPick"
-    # Subscribe to the Select tag
-    n = server.get_node("ns=2;s=%s" % s_idx)
-    sub.subscribe_data_change(n)
 
 
 
