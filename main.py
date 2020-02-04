@@ -1,9 +1,6 @@
-from pick_box import PickBox, PickByLight
+import simple_pick_by_light.simple_pbl as pbl
+import simple_pick_by_light.ua_server as ua_server
 from time import sleep
-import yaml
-import warnings
-#import packml
-import ua_server
 
 
 
@@ -11,13 +8,17 @@ import ua_server
 
 if __name__ == "__main__":
 
-
-    boxes = read_config()
-
-    pbl = PickByLight(boxes, 'Asset_AAUSmartPickByLight')
+    pbl.init()
+    ua_server.init()
 
 
-    sleep(900)
+    try:
+        while True:
+            sleep(10)
+    except KeyboardInterrupt:
+        ua_server.ua_server.stop()
+        GPIO.cleanup()
+        print('interrupted!')
 
 
 

@@ -1,9 +1,12 @@
 from opcua import ua, Server, Node
-import simple_pbl as pbl
+from time import sleep
+from threading import Thread, Event
+from simple_pick_by_light import simple_pbl as pbl
+from simple_pick_by_light.simple_pbl import Box
 
 
 
-class SubHandler(object):
+class SubHandler:
 
     """
     Subscription Handler. To receive events from server for a subscription
@@ -11,7 +14,7 @@ class SubHandler(object):
     def event_notification(self, event):
         print("Python: New event. No function implemented", event)
 
-    def datachange_notification(self, node: Node, val, data):
+    def datachange_notification(self, node, val, data):
         """UA server callback on data change notifications
             This is a workaround for kepware that does not support 
             UA methods, so instead is has "trigger tags" that when 
@@ -33,10 +36,6 @@ class SubHandler(object):
             # get the node browse name. 
             node_id = node.get_browse_name().Name
 
-            # If the trigger tag changes to true go in and update the select tag and set
-            # the trigger back to false. When setting it back to false this method gets
-            # called again, that's why this if statement checks if the value is True 
-            # so the method does not call itself continuously. 
             if node_id == "Select" :
                 pbl.select_box(val)
                 node.set_value(-1)
@@ -92,24 +91,22 @@ BoxesStatus = Status.add_object('ns=2;s=Status.Boxes', 'Boxes')
 BoxesCommonStatus = BoxesStatus.add_object('ns=2;s=Status.Boxes.Common', 'Common')
 
 
+
 def init():
         
     # for all boxes generate tags
     for port in pbl.boxes:
+        # Make a name folder with the port_number as the name
         b_idx = 'Status.Boxes.%s' %port
-        # create an object in the packml status object using our unique box idx
+        # create an object in the packml status object using our unique idx
         b_obj = BoxesStatus.add_object("ns=2;s=%s" % b_idx, str(port))
         
         # TODO make this a loop that looks up tags from a list of tags 
         # Create Status tags 
-        s_idx = b_idx + ".Selected"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'Selected', False, ua.VariantType.Boolean)
+        for attr in Box.public_attributes:      
+            s_idx = b_idx + "." + attr
+            b_obj.add_variable("ns=2;s=%s" % s_idx, attr, False, ua.VariantType.Boolean)
 
-        s_idx = b_idx + ".PirActivity"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'PirActivity', False, ua.VariantType.Boolean)    
-
-        s_idx = b_idx + ".WrongPick"
-        b_obj.add_variable("ns=2;s=%s" % s_idx, 'WrongPick', False, ua.VariantType.Boolean) 
 
     '''
     create command tags. This is because kepware does not support ua methods. 
@@ -131,6 +128,11 @@ def init():
     b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', False, ua.VariantType.Int16)
     b_var.set_writable()
 
+    """
+    #########################################################################################
+                            ALL TAGS CREATED: START UA SERVER                                #
+    #########################################################################################
+    """
     # Start the server 
     ua_server.start()
 
@@ -139,9 +141,12 @@ def init():
 
     # set box_idx to command tags
     b_idx = 'Command.Boxes'
+    
+    # create handler for subscriptions 
+    handler = SubHandler()
 
     # Create UA subscriber node for the box
-    sub = ua_server.create_subscription(100, SubHandler)
+    sub = ua_server.create_subscription(100, handler)
     # Set String_idx to Select tag
     s_idx = b_idx + ".Select"
     # Subscribe to the Select tag
