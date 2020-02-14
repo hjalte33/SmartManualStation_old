@@ -31,7 +31,7 @@ class SubHandler:
         if val != -1 :
             
             # Print info
-            print("Python: New data change event", node, val)
+            print("New data change event", node, val)
             
             # get the node browse name. 
             node_id = node.get_browse_name().Name
@@ -101,11 +101,10 @@ def init():
         # create an object in the packml status object using our unique idx
         b_obj = BoxesStatus.add_object("ns=2;s=%s" % b_idx, str(port))
         
-        # TODO make this a loop that looks up tags from a list of tags 
         # Create Status tags 
-        for attr in Box.public_attributes:      
+        for attr, p_type in Box.public_attributes:      
             s_idx = b_idx + "." + attr
-            b_obj.add_variable("ns=2;s=%s" % s_idx, attr, False, ua.VariantType.Boolean)
+            b_obj.add_variable("ns=2;s=%s" % s_idx, attr, p_type())
 
 
     '''
@@ -117,15 +116,15 @@ def init():
     b_obj = Command.add_object("ns=2;s=%s" % b_idx, 'Boxes')
     # Create command tag for triggering the selection
     s_idx = b_idx + ".Select"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', False, ua.VariantType.Int16)
+    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Select', -1, ua.VariantType.Int16)
     b_var.set_writable()
 
     s_idx = b_idx + ".Deselect"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Deselect', False, ua.VariantType.Int16)
+    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'Deselect', -1, ua.VariantType.Int16)
     b_var.set_writable()
 
     s_idx = b_idx + ".ClearWrongPick"
-    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', False, ua.VariantType.Int16)
+    b_var = b_obj.add_variable("ns=2;s=%s" % s_idx, 'ClearWrongPick', -1, ua.VariantType.Int16)
     b_var.set_writable()
 
     """
@@ -164,7 +163,9 @@ def init():
     # Subscribe to the Select tag
     n = ua_server.get_node("ns=2;s=%s" % s_idx)
     sub.subscribe_data_change(n)
-
+    
+    updater = VarUpdater()
+    updater.start()
 
 
 def update_ua_status(name, value):
@@ -187,19 +188,30 @@ def update_ua_var(node_id, value):
         print(e) 
 
 class VarUpdater(Thread):
-    def __init__(self, var):
+    def __init__(self):
         Thread.__init__(self)
         self._stopev = False
-        self.var = var
 
     def stop(self):
         self._stopev = True
 
     def run(self):
         while not self._stopev:
-            v = time.time()
-            self.var.set_value(v)
-            time.sleep(1)
+            
+            # for all boxes update tags
+            for port, box in pbl.boxes.items():
+                # Make a name folder with the port_number as the name
+                b_idx = 'Status.Boxes.%s' %port
+                
+               
+                # Create Status tags 
+                for attr, p_type in Box.public_attributes:     
+                    s_idx = b_idx + "." + attr
+                    
+                    # get the object in the packml status object using our unique idx
+                    node = ua_server.get_node("ns=2;s=%s" % s_idx,)  
+                    node.set_value(pbl.get_box_attr(port, attr))
+            sleep(1)
 
 
 

@@ -4,12 +4,14 @@ import warnings
 from datetime import datetime, timedelta
 from time import sleep
 from threading import Thread, Event
-from opcua import ua, Server, Node
+#from opcua import ua, Server, Node
+import pkg_resources
 
-
+GPIO.setwarnings(False)
 
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BOARD)
+    print('setting GPIO to board mode')
 elif GPIO.getmode() == GPIO.BOARD:
     raise Warning('GPIO.mode was already set to BOARD somewhere else.')
 elif GPIO.getmode() == GPIO.BOARD:
@@ -17,17 +19,24 @@ elif GPIO.getmode() == GPIO.BOARD:
 else:
     raise Exception('GPIO.mode is set to some unknown mode. This library needs BOARD mode. I didn\'t try to change it ')
 
+#************************************************************************#
+#            Global Variables                                            #
+#************************************************************************#
 
 pin_config = {} # Dict for the pin config. Indexed by port number
 boxes = {} # Dict of boxes. indexed by port number
 
-
 # List for all selected ports
 selected = []
 
+# Could be any dot-separated package/module name or a "Requirement"
+resource_package = __name__ 
 
+#************************************************************************#
+#            Global Variables                                            #
+#************************************************************************#
 
-def init(pin_conf_path = './pin_config.yaml', box_conf_path = './box_config.yaml'):
+def init(pin_conf_name = 'pin_config.yaml', box_conf_name = 'box_config.yaml'):
     """Module initialiser
 
     Keyword Arguments:
@@ -35,8 +44,9 @@ def init(pin_conf_path = './pin_config.yaml', box_conf_path = './box_config.yaml
         box_conf_path {str} -- path to config file (default: {'./box_config.yaml'})
 
     """
-    _load_pin_config(pin_conf_path)
-    _load_box_config(box_conf_path)
+
+    _load_pin_config(pin_conf_name)
+    _load_box_config(box_conf_name)
            
     # Start thread for updating the LEDs
     led_args = {'period_on': 2000, 'period_off': 300, 'scan_freq': 10}
@@ -46,12 +56,13 @@ def init(pin_conf_path = './pin_config.yaml', box_conf_path = './box_config.yaml
     wrong_pick = Event()
     Thread(target = _pir_monitor, daemon=True).start()
 
-def _load_pin_config (pin_conf_path):
+def _load_pin_config (pin_conf_name):
     try:
-        # load the pin config file
-        with open(pin_conf_path ,'r') as yamlfile:
-            global pin_config
-            pin_config = yaml.load(yamlfile)      
+        # try to load the pin config file from the data folder
+        data_path = '/'.join(('data', pin_conf_name))  # Do not use os.path.join()
+        yamlfile = pkg_resources.resource_string(resource_package, data_path)
+        global pin_config
+        pin_config = yaml.load(yamlfile)      
 
     except FileNotFoundError as f:
         warnings.warn('The pin configuration file: %s, could not be found' %f)
@@ -76,12 +87,13 @@ def _load_pin_config (pin_conf_path):
             warnings.warn('something went wrong in reading the pin config for port "%s". The port is skiped' %connector)
             pin_config.pop(connector, None)
 
-def _load_box_config(box_conf_path):
+def _load_box_config(box_conf_name):
     # Try to load the box configuration. 
     try:
         # Load the box configuration 
-        with open(box_conf_path ,'r') as yamlfile:
-            box_config = yaml.load(yamlfile)
+        data_path = '/'.join(('data', box_conf_name))  # Do not use os.path.join()
+        yamlfile = pkg_resources.resource_string(resource_package, data_path)   
+        box_config = yaml.load(yamlfile)
         
         # Go through the config box by box
         for port_number, args in box_config.items():
@@ -173,8 +185,7 @@ def _pir_monitor():
     while True:
         sleep(0.5)
         activities = [port for port, box in boxes.items() if box.pir_activity]
-        {boxes[port].wrong_pick for port in activities if not boxes[port].selected}
-
+    
         for port in activities:
             # If selected set flag to mark wrongly picked boxes
             # Only if some box is selected it makes sense to mark wrongly picked boxes.
@@ -185,7 +196,7 @@ def _pir_monitor():
             # If activity on something not selected send to list of boxes to mark
         
         if not activities:
-            [setattr(boxes[port], 'wrong_pick', False) for port in boxes]
+            {setattr(boxes[port], 'wrong_pick', False) for port in boxes}
 
 def set_box_attr(port_number, attr, value):
     if hasattr(boxes[port_number], attr):
@@ -197,6 +208,7 @@ def select_box(port_number, val = True):
     set_box_attr(port_number, "selected", val)
 
 
+
 class Box:
     """Simple class holding all the basic functions needed for a single pick box
     
@@ -206,11 +218,16 @@ class Box:
 
     # parameters exposed to servers eg. opc-ua.
     # TODO include datatype. 
-    public_attributes = ('selected', 'pir_activity', 'name', 'content_id', 'quantity', 'content', 'wrong_pick')
+    public_attributes = (('selected',bool), 
+                         ('pir_activity',bool), 
+                         ('name',str), 
+                         ('quantity', int), 
+                         ('content_id', str), 
+                         ('wrong_pick', bool))
 
     def __init__(self,  port_number, **kwargs):
         # Set identification attributes
-        self.pir_pin, self.led_pin = get_pins(port_number)
+        self.led_pin, self.pir_pin = get_pins(port_number)
         self.port_number = port_number
 
         # Set Status attributes 
@@ -222,7 +239,6 @@ class Box:
         self.set_params(**kwargs)
         
         # GPIO setup
-        GPIO.setwarnings(False)
         GPIO.setup(self.pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.led_pin, GPIO.OUT)
 
@@ -237,15 +253,24 @@ class Box:
     def __getattr__(self, name):
         """intercepting requests to undefinde attributes. If attribute not set, 
         but exists as a valid box attribute return None other wise throw error.
+        This way the attributes does not need to be defined one by one. 
         """
         if name in Box.public_attributes:
             return None
 
     def set_params (self,**kwargs):
-        # Set more attributes if passed to the pick box. 
+        # Set more attributes if passed to the pick box.
+
+        # quickly convert the parameters into a dict for easier access. 
+        attr_types = {item[0]: item[1] for item in Box.public_attributes}
+
         for key, value in kwargs.items():
-            if key in Box.public_attributes:
-                setattr(self, key, value)
+            if key in attr_types.keys():
+                try:
+                    type_func = attr_types[key]                               
+                    setattr(self, key, type_func(value))
+                except ValueError:
+                   raise ValueError("Type does not match", key)
             else:
                 raise ValueError("unexpected kwarg value", key)    
 
@@ -259,7 +284,6 @@ class Box:
         """
         if self.pir_ready:
             Thread(target=self.pir_sleeper, daemon=True, args=(pin,)).start()
-        pass
 
     def pir_sleeper(self,pin):
         """Thread that sleeps while the pir is stabalizing.
@@ -267,14 +291,20 @@ class Box:
         Arguments:
             pin {int} -- pin of trigger
         """ 
-        if 1 == GPIO.input(self.pir_pin):
+        pin_status = GPIO.input(self.pir_pin)
+        if pin_status == 1:
             print('Pir detected on box: %s' % self.port_number)
             self.pir_activity = True
             self.pir_ready = False
             self.selected = False
-            sleep(5)  
-        else:
+            sleep(5) 
+            # update the pin status  
+            pin_status = GPIO.input(self.pir_pin)
+        
+        # always check again if pin status is 0 
+        if pin_status == 0:
             self.pir_activity = False
+        # finally set the pin ready flag 
         self.pir_ready = True
 
     def toggle_led(self):
