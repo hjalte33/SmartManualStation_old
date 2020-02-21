@@ -217,7 +217,6 @@ class Box:
     """
 
     # parameters exposed to servers eg. opc-ua.
-    # TODO include datatype. 
     public_attributes = (('selected',bool), 
                          ('pir_activity',bool), 
                          ('name',str), 
