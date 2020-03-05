@@ -207,6 +207,10 @@ def set_box_attr(port_number, attr, value):
 def select_box(port_number, val = True):
     set_box_attr(port_number, "selected", val)
 
+def wait_for_pick(port_number):
+    while boxes[port_number].selected:
+        sleep(0.1)
+
 
 
 class Box:

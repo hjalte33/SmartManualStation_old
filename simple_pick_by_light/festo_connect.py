@@ -2,41 +2,55 @@ from time import sleep
 from threading import Thread, Event
 from simple_pick_by_light import simple_pbl as pbl
 from simple_pick_by_light.simple_pbl import Box
-
-# setup tcpip server that the festo line can connect to. 
-...
-
-def init():
-    # if any init code here 
-    ...
-
-    # start var update 
-    updater = VarUpdater()
-    updater.start()
-
-def operation_number_handler(op_number):
-    if op_number = 801:
-        ... # select something
-    elif op_number = 802:
-        ... # do something else
+import socket
 
 
 
-class VarUpdater(Thread):
+class FestoServer(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self._stopev = False
+        # setup tcpip server that the festo line can connect to. 
+        self.TCP_IP = '127.0.0.1'
+        self.TCP_PORT = 5005
+        self.BUFFER_SIZE = 20  # Normally 1024, but we want fast response
 
-    def stop(self):
-        self._stopev = True
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.bind((self.TCP_IP, self.TCP_PORT))
+        self.s.listen(1)
 
     def run(self):
-        while not self._stopev:
-            
-            # for all boxes update tags
-            for port, box in pbl.boxes.items():              
-                # go through the public attributes on each box.  
-                for attr, p_type in Box.public_attributes:     
- 
-            # update frequenzy 500 ms
-            sleep(0.5)
+        while True:
+            conn, addr = self.s.accept()
+            print ('Connection address:', addr)
+            data = conn.recv(self.BUFFER_SIZE)
+            if not data: 
+                break
+            print ("received data:", data)
+            response = operation_number_handler(data)
+            conn.send(response)  # echo
+            conn.close()
+
+
+def init():
+    # start Festo Server 
+    server = FestoServer()
+    server.start()
+
+
+
+def operation_number_handler(op_number):
+    if op_number == 801:
+        # select something
+        pbl.select_box(1)
+        pbl.wait_for_pick(1)
+        pbl.select_box(2)
+        pbl.select_box(3)
+        pbl.wait_for_pick(2)
+        pbl.wait_for_pick(3)
+
+    elif op_number == 802:
+        ... # do something else
+
+    return "hej"
+
+
