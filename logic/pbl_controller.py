@@ -1,8 +1,8 @@
 from hardware.pbl import PBL
 
-class PBLControl:
+class PBLController:
     def __init__ (self, pbl : PBL):
         self.pbl = pbl
 
-
+    
 
