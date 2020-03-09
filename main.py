@@ -20,6 +20,7 @@ if __name__ == "__main__":
         ua_server.ua_server.stop()
         GPIO.cleanup()
         print('interrupted!')
+        festo.FestoServer.s.close()
 
 
 
