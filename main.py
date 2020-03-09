@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import RPi.GPIO as GPIO
 import simple_pick_by_light.simple_pbl as pbl
 import simple_pick_by_light.ua_server as ua_server

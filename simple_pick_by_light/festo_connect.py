@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
 from time import sleep
 from threading import Thread, Event
 from simple_pick_by_light import simple_pbl as pbl
 from simple_pick_by_light.simple_pbl import Box
-import socket
 from opcua import ua, Client
+import PySimpleGUI as sg
 
 client = Client("opc.tcp://172.20.8.1:4840")
 
@@ -11,49 +12,23 @@ class FestoServer(Thread):
     def __init__(self):
         Thread.__init__(self)
         # setup tcpip server that the festo line can connect to. 
-        self.TCP_IP = '0.0.0.0'
-        self.TCP_PORT = 5005
-        self.BUFFER_SIZE = 3  # Normally 1024, but we want fast response
-
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.bind((self.TCP_IP, self.TCP_PORT))
-        self.s.listen(1)
-    
-        client = Client(url)
 
         client.connect()
         print("Client Connected")
-        flag = client.get_node("ns=2;s=|var|CECC-LK.Application.g_ctrl_modules.man_1.com") 
+        
         
 
     def run(self):
-
-
         while True:
-            print('listening for tcp-ip')
-            conn, addr = self.s.accept()
-            print ('Connection address:', addr)
-            while True:
-                try:
-                    print("waiting for data")
-                    data = conn.recv(self.BUFFER_SIZE)
-                    print(data)
-                    print ("received data:", data.decode())
-                    if data.decode():
-                        conn.send("1".encode())
-                    else:
-                        break
-                    response = operation_number_handler(data.decode())
-                    print("sending ", response)
-                    conn.send(response.encode())  # echo
-                
-                except KeyboardInterrupt:
-                    print('interrupted!')
-                    conn.close()
-                except Exception as e:
-                    print("error on tcp connection: clossing connection ", e)
-                    conn.close()
-                    break
+            sleep(0.1)
+            flag = client.get_node("ns=2;s=|var|CECC-LK.Application.Flexstation_globalVariables.FlexStationStatus") 
+            status = flag.get_value()
+            if status == 1:
+                flag.set_value(ua.Variant(2, ua.VariantType.Int16))
+                Operation_number = client.get_node("ns=2;s=|var|CECC-LK.Application.FBs.stpStopper1.stAppControl.uiOpNo") # change to order id
+                response = operation_number_handler(Operation_number.get_value())
+                flag.set_value(ua.Variant(3, ua.VariantType.Int16))
+                sleep(1)
 
 
 def init():
@@ -63,10 +38,22 @@ def init():
 
 
 def draw_pic(color):
+    sg.theme('Dark Blue 3')  # please make your windows colorful
+
+    layout = [[sg.Text('pic the ' + color + ' cover', size=(80,5),font=('Helvetica', 20))],
+            [sg.Submit(size=(40,5), font=('Helvetica', 20)), sg.Cancel(size=(40,5),font=('Helvetica', 20))]]
+
+    window = sg.Window('smart manual station', layout)
+
+    event, values = window.read()
+    window.close()
+
+    print(values)  # the first input element is values[0]
     pass
 
 def operation_number_handler(op_number):
     op_number = int(op_number)
+
     if op_number == 802:
         #blue
         pbl.select_box(1)
@@ -87,6 +74,6 @@ def operation_number_handler(op_number):
     else: 
         print("not a valid operation")
         return "404"
-    return "2"
+    return "3"
 
 
