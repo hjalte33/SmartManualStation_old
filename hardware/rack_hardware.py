@@ -2,7 +2,7 @@ from itertools import zip_longest
 from hardware.port_dummy import Port
 
 class RackHardware:
-    def __init__(self,name, ports, boxes = [], ):
+    def __init__(self,name, ports, boxes = [] ):
 
         self._port_sterilizer(ports)
         
@@ -37,11 +37,11 @@ class RackHardware:
     def get_ports(self):
         return [val["port"] for val in self.ports.values()]
     
-    def attach_box_port(self, port, box):
-        if hasattr(self.ports, port):
+    def attach_box_port(self, box, port):
+        if port in self.ports:
             self.ports[port] = box
         else :
-            raise KeyError('port number not on this rack')
+            raise KeyError('port number: ' + port + ' is not on this rack')
     
     def clear_port(self, port):
         self.attach_box_port(port, None)

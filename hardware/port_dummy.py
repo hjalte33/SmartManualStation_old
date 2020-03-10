@@ -20,14 +20,6 @@ class Port:
             return False
 
     @property
-    def led_pin(self):
-        return 1
-    
-    @property
-    def pir_pin(self):
-        return 2
-
-    @property
     def time_since_activity(self):
         return datetime.now() - self.activity_timestamp
     
