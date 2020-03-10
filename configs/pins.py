@@ -8,14 +8,13 @@ def _load_pins (pin_conf_name = "default_pin_config.yaml"):
     resource_package = __name__
     try:
         # try to load the pin config file from the data folder
-        data_path = '/'.join((pin_conf_name))  
+        data_path = '/'.join((pin_conf_name,))  
         yamlfile = pkg_resources.resource_string(resource_package, data_path)
         global __pin_config
         __pin_config = yaml.load(yamlfile)      
 
     except FileNotFoundError as f:
-        warnings.warn('The pin configuration file: %s, could not be found' %f)
-        raise(f)
+        raise FileNotFoundError('The pin configuration file: %s, could not be found' %f)
 
     # loop through the pin configurations for each connector
     # This loop verifies all settings make sense. 

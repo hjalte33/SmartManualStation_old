@@ -8,14 +8,12 @@ class Dummy:
     def __init__(self):
         # GPIO.setmode(GPIO.BOARD)
         # GPIO.setup(32, GPIO.OUT)
-        self.testvar1 = 55
-        self.testvar2 = "davdav"
+        self.s1 = 55
+        self.s2 = "davdav"
 
     def wow(self):
         print(self.testvar2)
 
-class WithSlots:
-    __slots__ = ['s1', 's2']
 
 #i = Dummy()
 #setattr(i,'something','goodday')
@@ -23,15 +21,21 @@ class WithSlots:
 
 ################################################################
 
-s = WithSlots()
-s.s1 = "foo"
-setattr(s,"ns1","bar")
+s = Dummy()
+l = Dummy()
 
-print (s.ns1)
+a_list = {"one": s, "two": l}
 
-i = Dummy()
+b_list = []
+b_list.append(a_list["two"])
 
-print(s.s1)
+b_list[0].s2 = "hejhej"
+
+del a_list["two"]
+
+
+print (a_list["one"].s2, b_list[0].s2)
+
 
 sleep(1)
 

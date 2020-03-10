@@ -18,13 +18,13 @@ class Port:
 
     def _pir_callback(self,pin):
         # if 5 sec passed since last activity
-        if datetime.now() > self.activity_timestamp + _cooldown_time:
+        if datetime.now() > self.activity_timestamp + self._cooldown_time:
             print('Pir detected high at port %s' % self.port_number)
             self.activity_timestamp = datetime.now()
 
     @property
     def activity(self):
-        if datetime.now() < self activity_timestamp + _cooldown_time:
+        if datetime.now() < self.activity_timestamp + self._cooldown_time:
             return True
         else:
             return False
