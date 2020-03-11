@@ -1,3 +1,3 @@
-from . import pins, boxes
+from . import pins, boxes_warehouse
 pins._load_pins()
-boxes._load_boxes()
+boxes_warehouse._load_boxes()

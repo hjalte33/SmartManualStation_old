@@ -50,7 +50,10 @@ def add_box(box):
 def rm_box(box):
     del __boxes[box.box_id] 
 
-def get_box_id(box_id):
+def get_boxes():
+    return __boxes
+
+def get_box(box_id):
     return __boxes.get(box_id, None)
 
 def get_boxes_by_content_id(content_id):
