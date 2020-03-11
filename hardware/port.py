@@ -27,10 +27,10 @@ class Port:
     def time_since_activity(self):
         return datetime.now() - self.activity_timestamp
     
-    def set_led(self, state):
+    def set_light(self, state):
         GPIO.output(self._led_pin, state)
     
-    def get_led(self) -> bool:
+    def get_light(self) -> bool:
         GPIO.input(self._led_pin)  
 
 

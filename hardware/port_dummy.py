@@ -23,11 +23,11 @@ class Port:
     def time_since_activity(self):
         return datetime.now() - self.activity_timestamp
     
-    def set_led(self, state):
+    def set_signal(self, state):
         _led_state = state
         print("led on port: ", self.port_number, " set to:" , self._led_state)
     
-    def get_led(self) -> bool:
+    def get_signal(self) -> bool:
         return self._led_state
     
     def _pir_dummy_thread(self):

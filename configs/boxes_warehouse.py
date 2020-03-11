@@ -23,8 +23,6 @@ def _load_boxes(boxes_conf_name = "boxes_config.yaml"):
         raise KeyError("boxes_config.yaml has a format error: ", f)
     
 
-
-
 def save_boxes(boxes_conf_name = "boxes_config.yaml"):
     to_save = {i: box.__dict__ for i, box in __boxes.items()}
     resource_package = __name__
@@ -51,3 +49,9 @@ def add_box(box):
 
 def rm_box(box):
     del __boxes[box.box_id] 
+
+def get_box_id(box_id):
+    return __boxes.get(box_id, None)
+
+def get_boxes_by_content_id(content_id):
+    return [box for box in __boxes if box.content_id == content_id]

@@ -1,5 +1,4 @@
-import RPi.GPIO as GPIO
-import simple_pick_by_light.simple_pbl as pbl
+from logic import 
 #import simple_pick_by_light.ua_server as ua_server
 from time import sleep
 
