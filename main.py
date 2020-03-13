@@ -15,7 +15,7 @@ if __name__ == "__main__":
     
     try:
         while True:
-            port_number = input("type in port to select")
+            port_number = int(input("type in port to select"))
             rack.select_port(port_number)
             sleep(1)
     except KeyboardInterrupt:
