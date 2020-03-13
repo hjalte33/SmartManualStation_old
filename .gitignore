@@ -126,3 +126,4 @@ dmypy.json
 
 #################################
 opcua_cache.db
+playground.py
