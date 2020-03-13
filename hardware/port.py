@@ -6,7 +6,7 @@ class Port:
     def __init__(self,port_number):
         self.port_number = port_number
         self.activity_timestamp = datetime()
-        self._cooldown_time = timedelta(5)
+        self.cooldown_time = timedelta(seconds = 5)
         
         # GPIO setup
         GPIO.setup(self._pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -18,10 +18,7 @@ class Port:
 
     @property
     def activity(self):
-        if datetime.now() < self.activity_timestamp + self._cooldown_time:
-            return True
-        else:
-            return False
+        return datetime.now() < self.activity_timestamp + self.cooldown_time
 
     @property
     def time_since_activity(self):
@@ -36,7 +33,7 @@ class Port:
 
     def _pir_callback(self,pin):
         # if 5 sec passed since last activity
-        if datetime.now() > self.activity_timestamp + self._cooldown_time:
+        if datetime.now() > self.activity_timestamp + self.cooldown_time:
             print('Pir detected high at port %s' % self.port_number)
             self.activity_timestamp = datetime.now()
     @property
