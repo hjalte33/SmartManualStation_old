@@ -20,6 +20,10 @@ class PortState:
         self.select_timestamp = datetime.fromtimestamp(0) # just some time long ago. 
         self.pick_timestamp = datetime.fromtimestamp(0)# just some time long ago
     
+    @property
+    def time_since_pick(self):
+        return datetime.now() - self.pick_timestamp
+
     def update(self, **kwargs):
         for arg, value in kwargs.items():
             setattr(self,arg,value)
@@ -36,6 +40,7 @@ class RackController(Thread):
         self.boxes = {port.port_number : box for port, box in zip_longest(ports,boxes)}
         # Initialize the state of all boxes with default values. 
         self.ports_select_state = {port_number : PortState() for port_number in self.ports.keys()}
+        self.wrong_activity_list = []
         self.light_last_cycle = datetime.now()
         self.rack_light_state = False   
         self.selected_light_period = timedelta(milliseconds = 1000)
@@ -60,6 +65,7 @@ class RackController(Thread):
                     raise TypeError("Expected a list of ports but got: ", type(port), port)
             return ports
 
+
     def _light_selected_ports(self):
         # Filter out all the selected ports. We don't really care about none selected ports in this function. 
         every_selected = {port_number:state for port_number, state in self.ports_select_state.items() if state.selected}
@@ -79,8 +85,19 @@ class RackController(Thread):
         # Finally write the state to all the selected ports. 
         for port_number in every_selected:
             self.ports[port_number].set_light(self.rack_light_state)  
-    
+
+
+    def _wrong_activity_blinker(self,port_number):
+        for i in range(1,10):
+            self.ports[port_number].set_light(i % 2)
+            sleep(0.333)  
+        self.wrong_activity_list.remove(port_number)
+
     def _monitor_activity(self):
+        """Checks if there's activity on any of the ports and selects
+            the appropiate function to run depending on the port_state.
+        """
+        # get every selected port. 
         every_selected = [port_number for port_number, state in self.ports_select_state.items() if state.selected]
 
         # If nothing is selected just stop doing any more checking. 
@@ -89,14 +106,17 @@ class RackController(Thread):
 
         # Go through ports and find activity
         for port_number, port_state in self.ports_select_state.items():
-            # get the activity on the port. if none thes just skip
+            # get the activity on the port. if no activity then just skip and take the next.
             if self.ports[port_number].activity is not True:
                 continue # just skip the rest
             
+            # If the port was marked as selected then go handle that. 
             if port_state.selected:
                 self._handle_pick(port_number)
+            # Else it must be a wrong pick 
             else:
-                self._handle_wrong_pick(port_number)          
+                self._handle_wrong_activity(port_number)          
+
 
     def _handle_pick(self,port_number):
         try:
@@ -128,19 +148,28 @@ class RackController(Thread):
             raise KeyError("Port {} not found. Must have been removed while selected.".format(port_number), e)
 
 
-    def _handle_wrong_pick(self, port_number):
+    def _handle_wrong_activity(self, port_number):
         # If no box is attached just ignore the sensor
         if not self.boxes.get(port_number):
             return 
         
+        # if it's already in the list of wrong pick it is being taken care of. 
+        if port_number in self.wrong_activity_list:
+            return
+
+        # Get the port and state to check if the activity is not just from 
+        # a recent pick.    
         port = self.ports.get(port_number)
         port_state = self.ports_select_state.get(port_number)
 
-        
-        time_since_pick = datetime.now() - port_state.pick_timestamp
-        if port and time_since_pick < port.cooldown_time:
+        # If the cooldown time has not passed ignore this activity. The activity is just be from a recent pick.
+        if port and port_state.time_since_pick < port.cooldown_time:
             return
         else:
+            # add the port_number to the list of wrong activity
+            self.wrong_activity_list.append(port_number)
+            # Then start a little blinking thread to warn the user. 
+            Thread(target=self._wrong_activity_blinker, daemon=True, args=(port_number,)).start()
             print("wrong pick", port_number)
         pass
 
