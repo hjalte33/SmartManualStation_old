@@ -3,7 +3,6 @@ from configs import boxes_warehouse
 from time import sleep
 from interfaces import virtual_pbl, ua_server
 
-
 if __name__ == "__main__":
 
     # Get some shiny boxes from warehouse
@@ -14,11 +13,14 @@ if __name__ == "__main__":
     rack = rc.RackController([1,2,3,4,5], boxes)
     rack.start()
     
+    my_server = ua_server.UAServer(rack)
     virtual_pbl.runLoop(rack)
+
+
+    
     try:
         while True:
-            port_number = int(input("type in port to select"))
-            rack.select_port(port_number)
+            
             sleep(1)
     except KeyboardInterrupt:
         print('interrupted!')
