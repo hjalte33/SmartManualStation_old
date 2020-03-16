@@ -14,7 +14,7 @@ if __name__ == "__main__":
     rack = rc.RackController([1,2,3,4,5], boxes)
     rack.start()
     
-    rack_gui.runLoop(rack)
+    virtual_pbl.runLoop(rack)
     try:
         while True:
             port_number = int(input("type in port to select"))
