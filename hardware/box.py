@@ -10,6 +10,7 @@ class Box:
     
     def rm_items(self, amount = 1):
         self.content_count -= 1
+        print('The content count of {} is now {}'.format(self.content_id, self.content_count))
     
     def get_content_id(self):
         return self.content_id

@@ -88,9 +88,12 @@ class RackController(Thread):
 
 
     def _wrong_activity_blinker(self,port_number):
-        for i in range(1,10):
-            self.ports[port_number].set_light(i % 2)
+        state = True
+        while self.ports[port_number].activity:
+            self.ports[port_number].set_light(state)
+            state = not state
             sleep(0.333)  
+        self.ports[port_number].set_light(False)
         self.wrong_activity_list.remove(port_number)
 
     def _monitor_activity(self):
@@ -185,7 +188,7 @@ class RackController(Thread):
         if not box:
             raise ValueError("No box attached to this port.")
 
-        #check if the box is there and that there's enough content. 
+        #check if there's enough content. 
         if box.content_count >= amount: 
             kwargs = {"selected": True,
                       "amount" : amount, 
@@ -194,26 +197,31 @@ class RackController(Thread):
                       "select_timestamp": datetime.now()}
             # Update port status
             self.ports_select_state[port_number].update(**kwargs)
-
+            return True
         else:
             return False
     
-    def deselect_port(self, port_number, auto_light_off = True):
+    def deselect_port(self, port_number):
         # if port not in this rack return false
         if port_number not in self.ports:
             return False
         
-        if port_number not in self.ports_select_state:
-            return True
-        
-        if auto_light_off or self.ports_select_state:
-            port = self.ports.get(port_number)
-            port.set_light(False) # Turn off the light
+        # get the box on this port    
+        box = self.boxes.get(port_number)
 
-        # remove the selected port
-        del self.ports_select_state[port_number]
+        if not box:
+            raise ValueError("No box attached to this port.")
 
+        # Update port status
+        self.ports_select_state[port_number].selected = False
+
+        # Take care of the final light state. 
+        if self.ports_select_state[port_number].auto_light_off:
+            self.ports[port_number].set_light(False)
+
+        # for now always return true.
         return True
+        
 
     def select_content_id(self, content_id, amount = 1, callback = None, auto_light_off = True):
         # TODO find the box on the rack with the given content id
