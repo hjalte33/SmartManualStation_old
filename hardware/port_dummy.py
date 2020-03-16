@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from random import randint
 from time import sleep
 from threading import Thread
+import PySimpleGUI as sg
+
 
 class Port:
     def __init__(self,port_number):
@@ -10,7 +12,7 @@ class Port:
         self.cooldown_time = timedelta(seconds = 5)
         self._light_state = 0
         
-        Thread(target=self._pir_dummy_thread, daemon=True).start()
+        #Thread(target=self._pir_dummy_thread, daemon=True).start()
 
     @property
     def activity(self):
@@ -21,16 +23,20 @@ class Port:
         return datetime.now() - self.activity_timestamp
 
     def set_light(self, state):
-        self._light_state = state
-        print("The light on port: ", self.port_number, " is set to:" , self._light_state)
+        if state != self._light_state: # just to slow down the prints in terminal
+            self._light_state = state
+            print("The light on port: ", self.port_number, " is set to:" , self._light_state)
     
     def get_light(self) -> bool:
         return self._light_state
     
+    def make_activity(self):
+        self.activity_timestamp = datetime.now()
+
     def _pir_dummy_thread(self):
         while True:
             sleep(randint(5,30))
-            print("wohoo! there's something going on heeer: ", self.port_number)
+            print("activity on: ", self.port_number)
             self.activity_timestamp = datetime.now()
 
 

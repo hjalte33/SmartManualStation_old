@@ -1,6 +1,7 @@
 from logic import rack_controller as rc
 from configs import boxes_warehouse
 from time import sleep
+from interfaces import virtual_pbl, ua_server
 
 
 if __name__ == "__main__":
@@ -13,6 +14,7 @@ if __name__ == "__main__":
     rack = rc.RackController([1,2,3,4,5], boxes)
     rack.start()
     
+    rack_gui.runLoop(rack)
     try:
         while True:
             port_number = int(input("type in port to select"))
