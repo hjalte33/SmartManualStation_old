@@ -24,7 +24,7 @@ class UAServer:
         # idx name will be used later for creating the xml used in data type dictionary
         # setup our own namespace, not really necessary but should as spec
         idx_name = 'http://examples.freeopcua.github.io'
-        self.idx =  self.ua_server.register_namespace(idx_name)
+        self.idx = self.ua_server.register_namespace(idx_name)
         
         # Set all possible endpoint policies for clients to connect through
         self.ua_server.set_security_policy([
@@ -35,18 +35,18 @@ class UAServer:
             ua.SecurityPolicyType.Basic256_Sign])
 
         # get Objects node, this is where we should put our custom stuff
-        objects =  self.ua_server.get_objects_node()
+        objects = self.ua_server.get_objects_node()
         # add a PackMLObjects folder
-        pml_folder =  objects.add_folder(self.idx, "PackMLObjects")
+        pml_folder = objects.add_folder(self.idx, "PackMLObjects")
         # Get the base type object
-        types =  self.ua_server.get_node(ua.ObjectIds.BaseObjectType)
+        types = self.ua_server.get_node(ua.ObjectIds.BaseObjectType)
         # Create a new type for PackMLObjects
-        PackMLBaseObjectType =  types.add_object_type(self.idx, "PackMLBaseObjectType")
+        PackMLBaseObjectType = types.add_object_type(self.idx, "PackMLBaseObjectType")
 
         # Create objects for the pack tags using the above created packMLBasedObjectType
-        self.Admin =  pml_folder.add_object('ns=2;s=Admin', "Admin", PackMLBaseObjectType.nodeid)
-        self.Status =  pml_folder.add_object('ns=2;s=Status', "Status", PackMLBaseObjectType.nodeid)
-        self.Command =  pml_folder.add_object('ns=2;s=Command', "Command", PackMLBaseObjectType.nodeid)
+        self.Admin = pml_folder.add_object('ns=2;s=Admin', "Admin", PackMLBaseObjectType.nodeid)
+        self.Status = pml_folder.add_object('ns=2;s=Status', "Status", PackMLBaseObjectType.nodeid)
+        self.Command = pml_folder.add_object('ns=2;s=Command', "Command", PackMLBaseObjectType.nodeid)
 
         # Create an object container for the rack
         self.RackStatus = self.Status.add_object('ns=2;s=Status.Rack', 'Rack')

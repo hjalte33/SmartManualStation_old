@@ -53,8 +53,8 @@ class RackController(Thread):
             pass 
 
     def _port_sterilizer(self, ports):        
-    # Detect if the ports are just a list of port numbers. If that's the case 
-    # then convert it to a list of actual ports. 
+        # Detect if the ports are just a list of port numbers. If that's the case 
+        # then convert it to a list of actual ports. 
         if type(ports[0]) == int:
             _ports = []
             [_ports.append(Port(port_number)) for port_number in ports]
@@ -65,13 +65,12 @@ class RackController(Thread):
                     raise TypeError("Expected a list of ports but got: ", type(port), port)
             return ports
 
-
     def _light_selected_ports(self):
         # Filter out all the selected ports. We don't really care about none selected ports in this function. 
         every_selected = {port_number:state for port_number, state in self.ports_select_state.items() if state.selected}
         
         # If nothing is selected, prepare for on cycle right away so when something 
-        # is selected then we turn on imediatly. 
+        # is selected then we turn on immediately. 
         if not every_selected:
             self.rack_light_state = True
             self.light_last_cycle = datetime.now()
@@ -86,7 +85,6 @@ class RackController(Thread):
         for port_number in every_selected:
             self.ports[port_number].set_light(self.rack_light_state)  
 
-
     def _wrong_activity_blinker(self,port_number):
         state = True
         while self.ports[port_number].activity:
@@ -98,7 +96,7 @@ class RackController(Thread):
 
     def _monitor_activity(self):
         """Checks if there's activity on any of the ports and selects
-            the appropiate function to run depending on the port_state.
+            the appropriate function to run depending on the port_state.
         """
         # get every selected port. 
         every_selected = [port_number for port_number, state in self.ports_select_state.items() if state.selected]
@@ -119,7 +117,6 @@ class RackController(Thread):
             # Else it must be a wrong pick 
             else:
                 self._handle_wrong_activity(port_number)          
-
 
     def _handle_pick(self,port_number):
         try:
@@ -150,7 +147,6 @@ class RackController(Thread):
         except KeyError as e:
             raise KeyError("Port {} not found. Must have been removed while selected.".format(port_number), e)
 
-
     def _handle_wrong_activity(self, port_number):
         # If no box is attached just ignore the sensor
         if not self.boxes.get(port_number):
@@ -175,7 +171,6 @@ class RackController(Thread):
             Thread(target=self._wrong_activity_blinker, daemon=True, args=(port_number,)).start()
             print("wrong pick", port_number)
         pass
-
 
     def select_port(self, port_number, amount = 1, callback = None, auto_light_off = True):
         # Check that the port is on this rack
@@ -222,7 +217,6 @@ class RackController(Thread):
         # for now always return true.
         return True
         
-
     def select_content_id(self, content_id, amount = 1, callback = None, auto_light_off = True):
         # TODO find the box on the rack with the given content id
         pass
