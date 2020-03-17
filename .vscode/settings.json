@@ -3,6 +3,10 @@
     "editor.fontSize": 12,
     "cSpell.words": [
         "itertools",
+        "packml",
         "yamlfile"
-    ]
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.flake8Enabled": false
 }
