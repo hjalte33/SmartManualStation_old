@@ -183,20 +183,26 @@ def _pir_monitor():
     """Thread function that checks if any of the boxes are selected wrongly 
     """
     while True:
-        sleep(0.5)
-        activities = [port for port, box in boxes.items() if box.pir_activity]
-    
-        for port in activities:
+        not_selected = [port for port, box in boxes.items() if not box.selected]
+
+        # if nothing is selected just clear all. 
+        if len(not_selected) == len(boxes):
+            {setattr(boxes[port], 'wrong_pick', False) for port in boxes}
+            sleep(1)
+            continue
+        
+        # here something must be selected so now we monitor all non selected. 
+        for port in not_selected:
             # If selected set flag to mark wrongly picked boxes
             # Only if some box is selected it makes sense to mark wrongly picked boxes.
-            if not boxes[port].selected:
+            if boxes[port].pir_activity:
                 boxes[port].wrong_pick = True
             else:
                 boxes[port].wrong_pick = False
-            # If activity on something not selected send to list of boxes to mark
         
-        if not activities:
-            {setattr(boxes[port], 'wrong_pick', False) for port in boxes}
+        sleep(0.1)
+
+           
 
 def set_box_attr(port_number, attr, value):
     if hasattr(boxes[port_number], attr):
@@ -206,6 +212,10 @@ def set_box_attr(port_number, attr, value):
 
 def select_box(port_number, val = True):
     set_box_attr(port_number, "selected", val)
+
+def wait_for_pick(port_number):
+    while boxes[port_number].selected:
+        sleep(0.1)
 
 
 
@@ -217,7 +227,6 @@ class Box:
     """
 
     # parameters exposed to servers eg. opc-ua.
-    # TODO include datatype. 
     public_attributes = (('selected',bool), 
                          ('pir_activity',bool), 
                          ('name',str), 
@@ -294,10 +303,12 @@ class Box:
         pin_status = GPIO.input(self.pir_pin)
         if pin_status == 1:
             print('Pir detected on box: %s' % self.port_number)
-            self.pir_activity = True
-            self.pir_ready = False
             self.selected = False
-            sleep(5) 
+            self.pir_ready = False
+            self.pir_activity = True
+            sleep(1)
+            self.pir_activity = False
+            sleep(4) 
             # update the pin status  
             pin_status = GPIO.input(self.pir_pin)
         
