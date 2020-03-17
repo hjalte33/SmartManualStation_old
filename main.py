@@ -14,7 +14,8 @@ if __name__ == "__main__":
     rack.start()
     
     my_server = ua_server.UAServer(rack)
-    virtual_pbl.runLoop(rack)
+    my_virtual = virtual_pbl.VirtualPBL(rack)
+    my_virtual.start()
 
 
     
@@ -23,6 +24,7 @@ if __name__ == "__main__":
             
             sleep(1)
     except KeyboardInterrupt:
+        my_virtual.stop()
         print('interrupted!')
 
 
