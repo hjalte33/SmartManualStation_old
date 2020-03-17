@@ -1,27 +1,32 @@
-#!/usr/bin/env python3
-import RPi.GPIO as GPIO
-import simple_pick_by_light.simple_pbl as pbl
-import simple_pick_by_light.ua_server as ua_server
-import simple_pick_by_light.festo_connect as festo
+from logic import rack_controller as rc
+from configs import boxes_warehouse
 from time import sleep
-
+from interfaces import virtual_pbl, ua_server
 
 if __name__ == "__main__":
 
-    pbl.init()
-    ua_server.init()
-    festo.init()
+    # Get some shiny boxes from warehouse
+    boxes = boxes_warehouse.get_boxes()
+    boxes = [box for box in boxes.values()]
+    boxes = boxes[0:5]
+
+    rack = rc.RackController([1,2,3,4,5], boxes)
+    rack.start()
+    
+    my_server = ua_server.UAServer(rack)
+    my_virtual = virtual_pbl.VirtualPBL(rack)
+    my_virtual.start()
 
 
+    
     try:
-        
         while True:
-            sleep(5)
+            
+            sleep(1)
     except KeyboardInterrupt:
-        ua_server.ua_server.stop()
-        GPIO.cleanup()
+        my_virtual.stop()
         print('interrupted!')
-        festo.FestoServer.s.close()
+
 
 
 
