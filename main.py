@@ -1,7 +1,7 @@
 from logic import rack_controller as rc
 from configs import boxes_warehouse
 from time import sleep
-from interfaces import virtual_pbl, ua_server
+from interfaces import virtual_pbl, ua_server, festo_connect
 
 if __name__ == "__main__":
 
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     rack.start()
     
     my_server = ua_server.UAServer(rack)
-    my_virtual = virtual_pbl.VirtualPBL(rack)
-    my_virtual.start()
+    my_festo = festo_connect.FestoServer(rack,"localhost").start()
+    my_virtual = virtual_pbl.VirtualPBL(rack).start()
 
 
     

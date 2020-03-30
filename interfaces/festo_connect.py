@@ -3,7 +3,7 @@ from time import sleep
 from threading import Thread, Event
 from opcua import ua, Client
 from logic.rack_controller import RackController
-import PySimpleGUI as sg
+import PySimpleGUIQt as sg
 
 
 
@@ -15,6 +15,8 @@ class FestoServer(Thread):
         self.client = Client("opc.tcp://{}:{}".format(festo_ip, ua_port))
         self.client.connect()
         print("Festo OPC-UA Client Connected")
+
+        self._select_event = Event()
         
     def run(self):
         while True:
@@ -25,7 +27,7 @@ class FestoServer(Thread):
                 flag.set_value(ua.Variant(2, ua.VariantType.Int16))
                 Operation_number = self.client.get_node("ns=2;s=|var|CECC-LK.Application.FBs.stpStopper1.stAppControl.uiOpNo") # change to order id
                 response = self.operation_number_handler(Operation_number.get_value())
-                flag.set_value(ua.Variant(3, ua.VariantType.Int16))
+                flag.set_value(ua.Variant(response, ua.VariantType.Int16))
                 sleep(1)
     
     def draw_pic(self, color):
@@ -36,35 +38,47 @@ class FestoServer(Thread):
 
         window = sg.Window('smart manual station', layout)
 
-        event, values = window.read()
+        while True:
+            event, values = window.read()
+            print(event, values)
+            if event is None or event == 'Cancel':
+                return_val = 4
+                self.rack.deselect_all()
+                break
+            elif event == "Submit" and self._select_event.is_set():
+                return_val = 3
+                break
+        # Finally
         window.close()
+        self._select_event.clear()
+        return return_val
 
-        print(values)  # the first input element is values[0]
-        pass
+
+    def _rack_callback(self, *args, **kwargs):
+        self._select_event.set()
 
     def operation_number_handler(self, op_number):
         op_number = int(op_number)
 
         if op_number == 802:
             #blue
-            self.rack.select_port(port_number=1, callback=)
-            self.draw_pic("blue")
-            pbl.wait_for_pick(1)
+            self.rack.select_port(port_number=1, callback=self._rack_callback)
+            return self.draw_pic("blue")
+            
 
         elif op_number == 803:
             #black
-            pbl.select_box(2)
-            self.draw_pic("black")
-            pbl.wait_for_pick(2)
+            self.rack.select_port(port_number=2, callback=self._rack_callback)
+            return self.draw_pic("blue")
 
         elif op_number == 804:
             #white
-            pbl.select_box(3)
-            self.draw_pic("white")
-            pbl.wait_for_pick(3)
+            self.rack.select_port(port_number=3, callback=self._rack_callback)
+            return self.draw_pic("blue")
+        
         else: 
             print("not a valid operation")
             return "404"
-        return "3"
+
 
 
