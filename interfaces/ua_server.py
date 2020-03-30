@@ -52,6 +52,12 @@ class UAServer:
         self.RackStatus = self.Status.add_object('ns=2;s=Status.Rack', 'Rack')
         #BoxesCommonStatus = BoxesStatus.add_object('ns=2;s=Status.Boxes.Common', 'Common')
 
+        root = self.ua_server.get_root_node()
+        DummyFestoObj = root.add_object("ns=2;s=|var|CECC-LK.Application.Flexstation_globalVariables", "DummyFesto")
+        DummyFestoObj.add_variable("ns=2;s=|var|CECC-LK.Application.Flexstation_globalVariables.FlexStationStatus", "FlexStationStatus", val=0).set_writable()
+        DummyFestoObj.add_variable("ns=2;s=|var|CECC-LK.Application.FBs.stpStopper1.stAppControl.uiOpNo","uiOpNo", val=0).set_writable()
+        
+
     def _generate_tags(self):
         # for all ports generate tags
         for port_number in self.rack.ports:
