@@ -196,7 +196,15 @@ class RackController(Thread):
         else:
             return False
     
+    def deselect_all(self):
+        for port_number in self.ports_select_state:
+            port_ss = self.ports_select_state[port_number]
+            port_ss.selected = False
+            if port_ss.auto_light_off:
+                self.ports[port_number].set_light(False) 
+
     def deselect_port(self, port_number):
+
         # if port not in this rack return false
         if port_number not in self.ports:
             return False
@@ -216,7 +224,7 @@ class RackController(Thread):
 
         # for now always return true.
         return True
-        
+
     def select_content_id(self, content_id, amount = 1, callback = None, auto_light_off = True):
         # TODO find the box on the rack with the given content id
         pass
