@@ -128,3 +128,4 @@ dmypy.json
 opcua_cache.db
 playground.py
 opcua_cache.*
+.vscode*
