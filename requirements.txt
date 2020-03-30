@@ -1,0 +1,6 @@
+cryptography      
+opcua        
+PySide2      
+PySimpleGUI  
+PySimpleGUIQt
+PyYAML      
