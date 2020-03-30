@@ -78,7 +78,7 @@ class FestoServer(Thread):
         
         else: 
             print("not a valid operation")
-            return "404"
+            return 404
 
 
 
