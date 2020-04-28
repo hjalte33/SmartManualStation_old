@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from logic import rack_controller as rc
 from configs import boxes_warehouse
 from time import sleep

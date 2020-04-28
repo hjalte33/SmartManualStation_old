@@ -2,18 +2,20 @@ from datetime import datetime, timedelta
 from configs import pins
 import RPi.GPIO as GPIO
 
+GPIO.setmode(GPIO.BOARD)
+
 class Port:
     def __init__(self,port_number):
         self.port_number = port_number
-        self.activity_timestamp = datetime()
-        self.cooldown_time = timedelta(seconds = 5)
+        self.activity_timestamp = datetime.now() - timedelta(minutes=10) # arbitrary time in the past. 
+        self.cooldown_time = timedelta(seconds=5)
         
         # GPIO setup
         GPIO.setup(self._pir_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self._led_pin, GPIO.OUT)
 
         # Add interupt and callback function when there's a change on the pir pin. 
-        GPIO.add_event_detect(self._pir_pin, GPIO.HIGH, callback=self._pir_callback)
+        GPIO.add_event_detect(self._pir_pin, GPIO.RISING, callback=self._pir_callback)
         pass
 
     @property
@@ -38,8 +40,8 @@ class Port:
             self.activity_timestamp = datetime.now()
     @property
     def _led_pin(self):
-        pins.get_led_pin(self.port_number)
+        return pins.get_led_pin(self.port_number)
     
     @property
     def _pir_pin(self):
-        pins.get_pir_pin(self.port_number)
+        return pins.get_pir_pin(self.port_number)
