@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 from time import sleep
 from threading import Thread, Event
 from opcua import ua, Client
 from logic.rack_controller import RackController
-import PySimpleGUIQt as sg
+import PySimpleGUI as sg
 
 
 

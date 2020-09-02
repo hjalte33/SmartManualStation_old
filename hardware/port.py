@@ -7,7 +7,7 @@ GPIO.setmode(GPIO.BOARD)
 class Port:
     def __init__(self,port_number):
         self.port_number = port_number
-        self.activity_timestamp = datetime.now() - timedelta(minutes=10) # arbitrary time in the past. 
+        self.activity_timestamp = datetime.now() - timedelta(minutes=10) # default is an arbitrary time in the past. 
         self.cooldown_time = timedelta(seconds=5)
         
         # GPIO setup
@@ -19,18 +19,18 @@ class Port:
         pass
 
     @property
-    def activity(self):
-        return datetime.now() < self.activity_timestamp + self.cooldown_time
+    def activity(self) -> bool:
+        return datetime.now() <= self.activity_timestamp + self.cooldown_time
 
     @property
     def time_since_activity(self):
         return datetime.now() - self.activity_timestamp
     
     def set_light(self, state):
-        GPIO.output(self._led_pin, state)
+        return GPIO.output(self._led_pin, state)
     
     def get_light(self) -> bool:
-        GPIO.input(self._led_pin)  
+        return GPIO.input(self._led_pin)  
 
 
     def _pir_callback(self,pin):

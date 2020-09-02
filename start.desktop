@@ -1,0 +1,8 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Name=Smart Manual Station
+Icon=/home/pi/manual_work_station/logo.png
+Exec=bash -c 'python3 /home/pi/manual_work_station/main.py;$SHELL'
+Terminal=true
