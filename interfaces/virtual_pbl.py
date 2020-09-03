@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import PySimpleGUI as sg
 from logic import rack_controller as rc
 from threading import Thread

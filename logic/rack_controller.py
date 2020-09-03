@@ -1,5 +1,6 @@
-from hardware.port_dummy import Port
+from hardware.port import Port
 from hardware.box import Box
+
 from threading import Thread
 from datetime import datetime, timedelta
 from itertools import zip_longest
@@ -36,10 +37,14 @@ class RackController(Thread):
         ports = self._port_sterilizer(ports)
         # create dict of all the port objects for the rack.
         self.ports = {port.port_number : port for port in ports}
-        # Create a dict of all box objects. Zip_longest pads with None if there's no boxes in the input list of boxes.
+        
+        # Create a dict of all box objects. This "attaches" the boxes to the ports. 
+        # Zip_longest pads with None if there's no boxes in the input list of boxes.
         self.boxes = {port.port_number : box for port, box in zip_longest(ports,boxes)}
+        
         # Initialize the state of all boxes with default values. 
         self.ports_select_state = {port_number : PortState() for port_number in self.ports.keys()}
+        
         self.wrong_activity_list = []
         self.light_last_cycle = datetime.now()
         self.rack_light_state = False   
@@ -47,7 +52,7 @@ class RackController(Thread):
 
     def run(self):
         while True:
-            self._light_selected_ports()
+            self._signal_selected_ports()
             self._monitor_activity()
             sleep(0.1)
             pass 
@@ -62,10 +67,10 @@ class RackController(Thread):
         else:
             for port in ports:
                 if type(port) != Port:
-                    raise TypeError("Expected a list of ports but got: ", type(port), port)
+                    raise TypeError("Expected a list of ports or port numbers but got: ", type(port), port)
             return ports
 
-    def _light_selected_ports(self):
+    def _signal_selected_ports(self):
         # Filter out all the selected ports. We don't really care about none selected ports in this function. 
         every_selected = {port_number:state for port_number, state in self.ports_select_state.items() if state.selected}
         

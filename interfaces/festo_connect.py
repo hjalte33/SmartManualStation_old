@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 from time import sleep
 from threading import Thread, Event
 from opcua import ua, Client
 from logic.rack_controller import RackController
-import PySimpleGUIQt as sg
+import PySimpleGUI as sg
 
 
 
@@ -33,8 +32,8 @@ class FestoServer(Thread):
     def draw_pic(self, color):
         sg.theme('Dark Blue 3')  # please make your windows colorful
 
-        layout = [[sg.Text('pic the ' + color + ' cover', size=(80,5),font=('Helvetica', 20))],
-                [sg.Submit(size=(40,5), font=('Helvetica', 20)), sg.Cancel(size=(40,5),font=('Helvetica', 20))]]
+        layout = [[sg.Text('pic the ' + color + ' cover', size=(50,10),font=('Helvetica', 20))],
+            [sg.Submit(size=(10,5), font=('Helvetica', 20)), sg.Cancel(size=(10,5),font=('Helvetica', 20))]]
 
         window = sg.Window('smart manual station', layout)
 
