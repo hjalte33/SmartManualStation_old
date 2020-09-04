@@ -2,7 +2,7 @@ from time import sleep
 from threading import Thread, Event
 from opcua import ua, Client
 from logic.rack_controller import RackController
-import PySimpleGUI as sg
+import PySimpleGUIQt as sg
 
 
 

@@ -26,13 +26,13 @@ if __name__ == "__main__":
     # Get some shiny boxes from warehouse
     boxes = boxes_warehouse.get_boxes()
     boxes = [box for box in boxes.values()]
-    boxes = boxes[0:5]
+    boxes = boxes[0:6]
 
     rack = rc.RackController([1,2,3,4,5,6], boxes)
     rack.start()
     
     my_server = ua_server.UAServer(rack)
-    #my_festo = festo_connect.FestoServer(rack,"localhost").start()
+    my_festo = festo_connect.FestoServer(rack,"172.20.13.1").start()
     my_virtual = virtual_pbl.VirtualPBL(rack).start()
 
 

@@ -6,3 +6,7 @@ Name=Smart Manual Station
 Icon=/home/pi/SmartManualStation/logo.png
 Exec=bash -c 'python3 /home/pi/SmartManualStation/main.py;$SHELL'
 Terminal=true
+
+
+
+
