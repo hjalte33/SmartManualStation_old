@@ -32,8 +32,8 @@ if __name__ == "__main__":
     rack.start()
     
     my_server = ua_server.UAServer(rack)
+    #my_virtual = virtual_pbl.VirtualPBL(rack).start()
     my_festo = festo_connect.FestoServer(rack,"172.20.13.1").start()
-    my_virtual = virtual_pbl.VirtualPBL(rack).start()
 
 
     

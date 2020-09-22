@@ -45,3 +45,6 @@ class Port:
     @property
     def _pir_pin(self):
         return pins.get_pir_pin(self.port_number)
+
+    def make_activity(self):
+        self.activity_timestamp = datetime.now()
