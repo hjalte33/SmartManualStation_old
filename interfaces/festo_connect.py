@@ -1,6 +1,7 @@
 from time import sleep
 from threading import Thread, Event
 from opcua import ua, Client
+import socket
 from logic.rack_controller import RackController
 import PySimpleGUI as sg
 
@@ -10,15 +11,18 @@ class FestoServer(Thread):
     def __init__(self, rack: RackController, festo_ip: str, ua_port = '4840'):
         super().__init__(daemon=True)
         self.rack = rack
-
-        self.client = Client("opc.tcp://{}:{}".format(festo_ip, ua_port))
-        self.client.connect()
-        print("Festo OPC-UA Client Connected")
-
+        try:
+            self.client = Client("opc.tcp://{}:{}".format(festo_ip, ua_port))
+            self.client.connect()
+            print("Festo OPC-UA Client Connected")
+            self.connected = True
+        except socket.timeout:
+            print("Failed to connect to OPC-UA on {}:{}".format(festo_ip,ua_port))
+            self.connected = False
         self._select_event = Event()
         
     def run(self):
-        while True:
+        while self.connected:
             sleep(0.1)
             flag = self.client.get_node("ns=2;s=|var|CECC-LK.Application.Flexstation_globalVariables.FlexStationStatus") 
             status = flag.get_value()

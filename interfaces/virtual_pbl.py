@@ -10,7 +10,7 @@ def LEDIndicator(key=None, radius=30):
              graph_top_right=(radius, radius),
              pad=(0, 0), key=key, enable_events=True)
 
-class VirtualPBL(Thread):
+class VirtualPBL():
     def __init__(self, rack: rc.RackController):
         super().__init__(daemon=True)
         self.rack = rack
@@ -28,7 +28,7 @@ class VirtualPBL(Thread):
 
     def _create_layout(self):
         """Create a layout that matches the rack"""
-        layout = [[sg.Text('Select, Port, Activity, Light', size=(20,1))]]
+        layout = [[sg.Text('Select, Port, Activity, Light', size=(60,1))]]
 
         for port_number in self.rack.ports:
             row = [sg.Check(text = None, key='_C{}_'.format(port_number), enable_events=True),
@@ -46,7 +46,9 @@ class VirtualPBL(Thread):
 
     def run(self):
         layout = self._create_layout()
-        self.window = sg.Window('Virtual Pick By Light', layout, default_element_size=(12, 1), auto_size_text=False, finalize=True)
+        self.window = sg.Window('Virtual Pick By Light', layout, no_titlebar=True, location=(0,0), size=(800,460), auto_size_text=False, finalize=True)
+        self.window.Maximize()
+
         while True:  # Event Loop
             event, value = self.window.read(timeout=100)
             if event == 'Exit' or event is None:
@@ -73,5 +75,5 @@ class VirtualPBL(Thread):
                 self._set_checkbox(self.window, '_C{}_'.format(port_number), self.rack.ports_select_state[port_number].selected)
         
         self.window.close()
-        raise KeyboardInterrupt("gui closed")
+        print("gui closed")
  

@@ -32,19 +32,13 @@ if __name__ == "__main__":
     rack.start()
     
     my_server = ua_server.UAServer(rack)
-    #my_virtual = virtual_pbl.VirtualPBL(rack).start()
     my_festo = festo_connect.FestoServer(rack,"172.20.13.1").start()
 
 
+    my_virtual = virtual_pbl.VirtualPBL(rack)
     
-    try:
-        from time import sleep
-        while True:
-            
-            sleep(1)
-    except KeyboardInterrupt:
-        my_virtual.stop()
-        print('interrupted!')
+
+    my_virtual.run()
 
 
 
